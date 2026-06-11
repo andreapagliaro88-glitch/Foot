@@ -28,6 +28,7 @@ from screens.equilibrium_block import render_equilibrium_block
 from screens.first_goal_chart import build_first_goal_data, render_first_goal_chart
 from screens.match_header import compute_header_insights, render_premium_header
 from screens.goal_timing import render_goal_timing
+from screens.momentum_chart import render_similar_momentum_block
 
 
 _PLOTLY_CONFIG = {"displayModeBar": False, "staticPlot": False}
@@ -232,6 +233,16 @@ def render():
     )
     render_premium_header(hw_pct, dr_pct, aw_pct, n, header_insights)
 
+    pm_home = filters.get("home_team") or "Casa"
+    pm_away = filters.get("away_team") or "Trasferta"
+    render_similar_momentum_block(
+        goal_events, match_ids, n,
+        pm_home, pm_away,
+        chart_key="pm_similar_momentum",
+        show_minute_marker=False,
+        subtitle="Intensità attesa casa vs trasferta sui 90 minuti (da gol storici nel campione)",
+    )
+
     # ═══════════════════════════════════════════
     # SEZIONE 02 — OVER / UNDER
     # ═══════════════════════════════════════════
@@ -300,13 +311,16 @@ def render():
 
     pm_view = st.radio(
         "Sezione analisi",
-        ["Riepilogo", "Gol & Risultati", "Tempi & Strategia", "Squadre & Export"],
+        ["Tutte", "Riepilogo", "Gol & Risultati", "Tempi & Strategia", "Squadre & Export"],
         horizontal=True,
         key="pm_view",
         label_visibility="collapsed",
     )
 
-    if pm_view == "Riepilogo":
+    def _pm_show(section: str) -> bool:
+        return pm_view == "Tutte" or pm_view == section
+
+    if _pm_show("Riepilogo"):
         import plotly.graph_objects as go
         # ═══════════════════════════════════════════
         # SEZIONE 03 — DISTRIBUZIONE GOL
@@ -492,7 +506,7 @@ def render():
         </div>
         """)
 
-    if pm_view == "Gol & Risultati":
+    if _pm_show("Gol & Risultati"):
         # ═══════════════════════════════════════════
         # SEZIONE 04 — PRIMO GOL
         # ═══════════════════════════════════════════
@@ -847,7 +861,7 @@ def render():
 
         st.html('</div>')
 
-    if pm_view == "Tempi & Strategia":
+    if _pm_show("Tempi & Strategia"):
         import plotly.graph_objects as go
         # ═══════════════════════════════════════════
         # SEZIONE 06 — OVER / UNDER PER TEMPO
@@ -1375,7 +1389,7 @@ def render():
 
         render_roi_dashboard(roi_data)
 
-    if pm_view == "Squadre & Export":
+    if _pm_show("Squadre & Export"):
         import plotly.graph_objects as go
         # ═══════════════════════════════════════════
         # SEZIONE 09 — PERFORMANCE SQUADRE

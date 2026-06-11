@@ -60,6 +60,7 @@ from advanced_over_strategy import (
     build_live_state,
 )
 from screens.roi_dashboard import render_roi_dashboard
+from screens.momentum_chart import render_similar_momentum_block
 from utils import format_pct, get_sorted_goals_with_team
 
 # ── Palette — matches prematch.py exactly ─────────────────────────────────────
@@ -1179,6 +1180,18 @@ def render():
         </div>
     </div>
     """)
+
+    # ═══════════════════════════════════════════════════════════════
+    # SEZIONE 0b — PROFILO PARTITA SIMILE (momentum atteso da campione)
+    # ═══════════════════════════════════════════════════════════════
+    render_similar_momentum_block(
+        goal_events, match_ids, n,
+        home_team, away_team,
+        chart_key="live_similar_momentum",
+        current_minute=current_minute,
+        show_minute_marker=True,
+        subtitle="Intensità attesa da gol storici · linea tratteggiata = minuto attuale",
+    )
 
     # ═══════════════════════════════════════════════════════════════
     # SEZIONE 1 — KPI LIVE (azioni immediate: prossimo gol, BTTS, esito)
