@@ -1,0 +1,247 @@
+{
+  "_comment": "Mappa nome squadra (come nel DB) → logo. Usa 'url' per link web oppure 'local' per file in assets/teams/",
+  "América Mineiro": {
+    "url": "",
+    "local": "assets/teams/america-mineiro.png"
+  },
+  "Atlético GO": {
+    "url": "",
+    "local": "assets/teams/atletico-go.png"
+  },
+  "Fortaleza": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/5/3621.png",
+    "local": "assets/teams/fortaleza.png"
+  },
+  "Fortaleza EC": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/5/3621.png",
+    "local": "assets/teams/fortaleza.png"
+  },
+  "Londrina": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/29/9181.png",
+    "local": "assets/teams/londrina.png"
+  },
+  "Sport Recife": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/16/2352.png",
+    "local": "assets/teams/sport-recife.png"
+  },
+  "Vila Nova": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/5/11941.png",
+    "local": "assets/teams/vila-nova.png"
+  },
+  "Criciúma": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/20/6036.png",
+    "local": "assets/teams/criciuma.png"
+  },
+  "Náutico": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/29/12157.png",
+    "local": "assets/teams/nautico.png"
+  },
+  "Operário PR": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/22/14710.png",
+    "local": "assets/teams/operario-pr.png"
+  },
+  "Goiás": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/11/9323.png",
+    "local": "assets/teams/goias.png"
+  },
+  "Novorizontino": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/2/6370.png",
+    "local": "assets/teams/novorizontino.png"
+  },
+  "Athletic Club": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/4/234948.png",
+    "local": "assets/teams/athletic-club.png"
+  },
+  "Juventude": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/16/48.png",
+    "local": "assets/teams/juventude.png"
+  },
+  "CRB": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/12/6188.png",
+    "local": "assets/teams/crb.png"
+  },
+  "Ceará": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/28/12220.png",
+    "local": "assets/teams/ceara.png"
+  },
+  "Cuiabá": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/23/5463.png",
+    "local": "assets/teams/cuiaba.png"
+  },
+  "Botafogo SP": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/8/104.png",
+    "local": "assets/teams/botafogo-sp.png"
+  },
+  "Avaí": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/4/6468.png",
+    "local": "assets/teams/avai.png"
+  },
+  "Ponte Preta": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/27/3931.png",
+    "local": "assets/teams/ponte-preta.png"
+  },
+  "Brusque": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/0/6304.png",
+    "local": "assets/teams/brusque.png"
+  },
+  "Guarani": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/24/3672.png",
+    "local": "assets/teams/guarani.png"
+  },
+  "Amazonas": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/6/238918.png",
+    "local": "assets/teams/amazonas.png"
+  },
+  "Ituano": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/12/13292.png",
+    "local": "assets/teams/ituano.png"
+  },
+  "Palmeiras": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/30/3422.png",
+    "local": "assets/teams/palmeiras.png"
+  },
+  "Bahia": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/20/692.png",
+    "local": "assets/teams/bahia.png"
+  },
+  "Bragantino": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/0/7808.png",
+    "local": "assets/teams/bragantino.png"
+  },
+  "Vasco da Gama": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/24/696.png",
+    "local": "assets/teams/vasco-da-gama.png"
+  },
+  "Remo": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/30/11550.png",
+    "local": "assets/teams/remo.png"
+  },
+  "Mirassol": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/22/11126.png",
+    "local": "assets/teams/mirassol.png"
+  },
+  "Chapecoense": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/6/710.png",
+    "local": "assets/teams/chapecoense.png"
+  },
+  "Botafogo": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/16/2864.png",
+    "local": "assets/teams/botafogo.png"
+  },
+  "Vitória": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/16/3440.png",
+    "local": "assets/teams/vitoria.png"
+  },
+  "Internacional": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/8/2696.png",
+    "local": "assets/teams/internacional.png"
+  },
+  "Grêmio": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/13/2925.png",
+    "local": "assets/teams/gremio.png"
+  },
+  "Santos": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/4/3684.png",
+    "local": "assets/teams/santos.png"
+  },
+  "Atlético PR": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/8/3432.png",
+    "local": "assets/teams/atletico-pr.png"
+  },
+  "Coritiba": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/13/6285.png",
+    "local": "assets/teams/coritiba.png"
+  },
+  "Cruzeiro": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/11/3371.png",
+    "local": "assets/teams/cruzeiro.png"
+  },
+  "Tombense": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/0/2592.png",
+    "local": "assets/teams/tombense.png"
+  },
+  "ABC": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/16/6544.png",
+    "local": "assets/teams/abc.png"
+  },
+  "Hwaseong": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/22/18294.png",
+    "local": "assets/teams/hwaseong.png"
+  },
+  "Daegu": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/10/6954.png",
+    "local": "assets/teams/daegu.png"
+  },
+  "Seoul E-Land": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/12/14732.png",
+    "local": "assets/teams/seoul-e-land.png"
+  },
+  "Suwon Bluewings": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/30/2366.png",
+    "local": "assets/teams/suwon-bluewings.png"
+  },
+  "Busan I'Park": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/2/2690.png",
+    "local": "assets/teams/busan-i-park.png"
+  },
+  "Jeonnam Dragons": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/3/7971.png",
+    "local": "assets/teams/jeonnam-dragons.png"
+  },
+  "Ansan Greeners": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/25/6201.png",
+    "local": "assets/teams/ansan-greeners.png"
+  },
+  "Cheongju": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/30/18334.png",
+    "local": "assets/teams/cheongju.png"
+  },
+  "Gyeongnam": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/15/7983.png",
+    "local": "assets/teams/gyeongnam.png"
+  },
+  "Seongnam": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/21/3605.png",
+    "local": "assets/teams/seongnam.png"
+  },
+  "Cheonan City": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/26/17818.png",
+    "local": "assets/teams/cheonan-city.png"
+  },
+  "Suwon": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/8/904.png",
+    "local": "assets/teams/suwon.png"
+  },
+  "Gimpo Citizen": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/15/18351.png",
+    "local": "assets/teams/gimpo-citizen.png"
+  },
+  "Anyang": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/0/8032.png",
+    "local": "assets/teams/anyang.png"
+  },
+  "Bucheon 1995": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/1/7361.png",
+    "local": "assets/teams/bucheon-1995.png"
+  },
+  "Daejeon Citizen": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/0/5664.png",
+    "local": "assets/teams/daejeon-citizen.png"
+  },
+  "Jeju United": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/2/8034.png",
+    "local": "assets/teams/jeju-united.png"
+  },
+  "Incheon United": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/10/6922.png",
+    "local": "assets/teams/incheon-united.png"
+  },
+  "Gwangju": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/18/4370.png",
+    "local": "assets/teams/gwangju.png"
+  },
+  "Gangwon": {
+    "url": "https://cdn.sportmonks.com/images/soccer/teams/9/7273.png",
+    "local": "assets/teams/gangwon.png"
+  }
+}

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+data/football.db
+data/football.db-wal
+data/football.db-shm
+.streamlit/secrets.toml
+exports/
