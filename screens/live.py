@@ -61,6 +61,7 @@ from advanced_over_strategy import (
 )
 from screens.roi_dashboard import render_roi_dashboard
 from screens.momentum_chart import render_similar_momentum_block
+from screens.first_goal_outcome import render_first_goal_outcome_block
 from utils import format_pct, get_sorted_goals_with_team
 
 # ── Palette — matches prematch.py exactly ─────────────────────────────────────
@@ -1375,6 +1376,19 @@ def render():
                 home_team, away_team,
                 first_goal_team=filters.get("first_goal_team"),
             )
+
+        # ═══════════════════════════════════════════════════════════════
+        # SEZIONE 2c — ESITO FINALE DOPO IL PRIMO GOL
+        # ═══════════════════════════════════════════════════════════════
+        _fgo_min = first_goal_min
+        if _fgo_min is None and filters.get("valid_goals"):
+            _fgo_min = filters["valid_goals"][0][0]
+        render_first_goal_outcome_block(
+            filtered,
+            goal_events,
+            live_minute=int(_fgo_min) if _fgo_min is not None else None,
+            live_team=filters.get("first_goal_team"),
+        )
 
         # ═══════════════════════════════════════════════════════════════
         # SEZIONE 3 — PROIEZIONE LIVE (intervalli dinamici 5/10/15 min)

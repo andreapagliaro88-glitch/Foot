@@ -2751,3 +2751,200 @@ def calc_live_roi_simulation(
         ],
     }
     return roi_data, n
+
+
+# ── Esito finale dopo il primo gol ─────────────────────────────────────────
+
+FIRST_GOAL_OUTCOME_TIMEFRAMES = ["0-15", "15-30", "30-45", "45-60", "60-75", "75-90"]
+
+
+def get_first_goal_outcome_timeframe(minute: int) -> str:
+    """Fascia oraria del primo gol (minuti inclusivi)."""
+    m = int(minute)
+    if m <= 15:
+        return "0-15"
+    if m <= 30:
+        return "15-30"
+    if m <= 45:
+        return "30-45"
+    if m <= 60:
+        return "45-60"
+    if m <= 75:
+        return "60-75"
+    return "75-90"
+
+
+def _match_final_result(row) -> str | None:
+    """home_win | draw | away_win da ft_result o gol FT."""
+    ft = str(row.get("ft_result") or "").strip().upper()
+    if ft in ("H", "1", "HOME"):
+        return "home_win"
+    if ft in ("D", "X", "DRAW"):
+        return "draw"
+    if ft in ("A", "2", "AWAY"):
+        return "away_win"
+
+    hf = row.get("home_goals_ft")
+    af = row.get("away_goals_ft")
+    if hf is None or af is None or pd.isna(hf) or pd.isna(af):
+        return None
+    hf, af = float(hf), float(af)
+    if hf > af:
+        return "home_win"
+    if hf == af:
+        return "draw"
+    return "away_win"
+
+
+def build_first_goal_outcome_dataset(
+    matches_df: pd.DataFrame,
+    goal_events: dict | None = None,
+) -> list[dict]:
+    """
+    Estrae per ogni partita:
+    {first_goal_minute, first_goal_team: home|away, final_result: home_win|draw|away_win}
+    """
+    from utils import get_first_goal_from_timings
+
+    if matches_df is None or matches_df.empty:
+        return []
+
+    records = []
+    for _, row in matches_df.iterrows():
+        fg = None
+        mid = row.get("match_id")
+        if mid is not None and goal_events:
+            events = goal_events.get(int(mid), [])
+            if events:
+                fg = get_first_goal_from_events(events)
+
+        if not fg:
+            home_t = row.get("home_goal_timings", "") or ""
+            away_t = row.get("away_goal_timings", "") or ""
+            if pd.isna(home_t):
+                home_t = ""
+            if pd.isna(away_t):
+                away_t = ""
+            fg = get_first_goal_from_timings(str(home_t), str(away_t))
+
+        if not fg:
+            continue
+
+        final = _match_final_result(row)
+        if not final:
+            continue
+
+        minute = int(fg["minute"])
+        team = fg["team"]
+        records.append({
+            "minute": minute,
+            "team": team,
+            "result": final,
+            "timeframe": get_first_goal_outcome_timeframe(minute),
+            # alias retrocompatibili
+            "first_goal_minute": minute,
+            "first_goal_team": team,
+            "final_result": final,
+        })
+    return records
+
+
+def _empty_first_goal_outcome_stats() -> dict:
+    empty_side = {"win": 0, "draw": 0, "lose": 0, "total": 0}
+    return {
+        tf: {"home": dict(empty_side), "away": dict(empty_side)}
+        for tf in FIRST_GOAL_OUTCOME_TIMEFRAMES
+    }
+
+
+def calc_first_goal_outcome_stats(matches: list[dict]) -> dict:
+    """Aggrega esiti finali per fascia e per chi segna il primo gol."""
+    stats = _empty_first_goal_outcome_stats()
+    for row in matches:
+        tf = row.get("timeframe") or get_first_goal_outcome_timeframe(
+            row.get("minute", row.get("first_goal_minute", 0))
+        )
+        team = row.get("team", row.get("first_goal_team"))
+        result = row.get("result", row.get("final_result"))
+        if team not in ("home", "away") or not result:
+            continue
+
+        stats[tf][team]["total"] += 1
+
+        if team == "home":
+            if result == "home_win":
+                stats[tf][team]["win"] += 1
+            elif result == "draw":
+                stats[tf][team]["draw"] += 1
+            else:
+                stats[tf][team]["lose"] += 1
+        else:
+            if result == "away_win":
+                stats[tf][team]["win"] += 1
+            elif result == "draw":
+                stats[tf][team]["draw"] += 1
+            else:
+                stats[tf][team]["lose"] += 1
+    return stats
+
+
+def first_goal_outcome_pct(part: int, total: int) -> float:
+    return round((part / total) * 100, 1) if total > 0 else 0.0
+
+
+def get_first_goal_outcome_percentages(data: dict) -> dict:
+    """Percentuali win/draw/lose per un bucket (home o away)."""
+    total = data.get("total", 0)
+    return {
+        "win": first_goal_outcome_pct(data.get("win", 0), total),
+        "draw": first_goal_outcome_pct(data.get("draw", 0), total),
+        "lose": first_goal_outcome_pct(data.get("lose", 0), total),
+        "total": total,
+    }
+
+
+def first_goal_probability_color(pct: float) -> str:
+    """Colore testo: alta ≥65%, media 45–65%, bassa <45%."""
+    if pct >= 65:
+        return "#22c55e"
+    if pct >= 45:
+        return "#f59e0b"
+    return "#ef4444"
+
+
+def get_first_goal_outcome_decision(minute: int, team: str, stats: dict) -> dict:
+    """Decision engine live: SEGUI / NEUTRO / LAY FORTE."""
+    tf = get_first_goal_outcome_timeframe(minute)
+    data = stats.get(tf, {}).get(team, {})
+    p = get_first_goal_outcome_percentages(data)
+    win = p["win"]
+
+    if win >= 70:
+        decision = "✅ SEGUI"
+        hint = "Dominio storico alto — evita lay sulla squadra che ha segnato."
+    elif win >= 55:
+        decision = "⚖️ NEUTRO"
+        hint = "Valuta il mercato: probabilità in zona intermedia."
+    else:
+        decision = "🔥 LAY FORTE"
+        lay_target = "CASA" if team == "home" else "TRASFERTA"
+        hint = f"Valuta se esiste valore di mercato per LAY {lay_target}."
+
+    return {
+        "timeframe": tf,
+        "win": p["win"],
+        "draw": p["draw"],
+        "lose": p["lose"],
+        "total": p["total"],
+        "decision": decision,
+        "hint": hint,
+    }
+
+
+def calc_home_dominance_drop(stats: dict) -> float:
+    """Drop dominio casa: win% early (0-15) vs late (60-75) quando casa segna per prima."""
+    early = stats.get("0-15", {}).get("home", {})
+    late = stats.get("60-75", {}).get("home", {})
+    early_pct = first_goal_outcome_pct(early.get("win", 0), early.get("total", 0))
+    late_pct = first_goal_outcome_pct(late.get("win", 0), late.get("total", 0))
+    return round(early_pct - late_pct, 1)
