@@ -12,8 +12,9 @@ from utils import parse_goal_minute_value, split_league_name
 _DATA_DIR = Path(__file__).resolve().parent / "data"
 _LEAGUE_FAVORITES_FILE = _DATA_DIR / "league_favorites.json"
 _ALL_LEAGUES_LABEL = "Tutte le competizioni"
+_LEAGUE_ALL_LABELS = ("Tutte le competizioni", "Tutti i campionati", "Tutti", "Tutte")
 
-_ANALYSIS_SCREENS = ("prematch", "live", "h2h", "simulator", "timeline")
+_ANALYSIS_SCREENS = ("prematch", "live", "h2h", "simulator", "timeline", "riepilogo")
 
 _SHARED_ODDS_KEYS = (
     "odds_home_min", "odds_home_max",
@@ -37,6 +38,22 @@ _ODDS_WIDGET_KEYS = {
         "odds_draw_max": "live_od_max",
         "odds_away_min": "live_oa_min",
         "odds_away_max": "live_oa_max",
+    },
+    "h2h": {
+        "odds_home_min": "h2h_oh_min",
+        "odds_home_max": "h2h_oh_max",
+        "odds_draw_min": "h2h_od_min",
+        "odds_draw_max": "h2h_od_max",
+        "odds_away_min": "h2h_oa_min",
+        "odds_away_max": "h2h_oa_max",
+    },
+    "dna": {
+        "odds_home_min": "dna_oh_min",
+        "odds_home_max": "dna_oh_max",
+        "odds_draw_min": "dna_od_min",
+        "odds_draw_max": "dna_od_max",
+        "odds_away_min": "dna_oa_min",
+        "odds_away_max": "dna_oa_max",
     },
 }
 
@@ -170,7 +187,7 @@ def tick_live_match_clock(elapsed_real_seconds: int = 1):
     st.session_state.live_match_second = int(st.session_state.get("live_match_second", 0)) + add_seconds
     while st.session_state.live_match_second >= 60:
         st.session_state.live_match_second -= 60
-        st.session_state.live_match_minute = int(st.session_state.get("live_match_minute", 0)) + 1
+        st.session_state.live_match_minute = int(st.session_state.get("live_match_minute", 1)) + 1
     if st.session_state.live_match_minute >= 90:
         st.session_state.live_match_minute = 90
         st.session_state.live_match_second = 0
@@ -200,9 +217,20 @@ def _init_h2h_widgets(sv: dict, teams: list | None = None):
         "h2h_min_goals_home":   int(sv.get("h2h_min_goals_home", 0)),
         "h2h_min_goals_away":   int(sv.get("h2h_min_goals_away", 0)),
         "h2h_venue":            sv.get("h2h_venue", "Tutti gli scontri"),
-        "h2h_league":           sv.get("h2h_league", "Tutti i campionati"),
     }
-    for key, val in _defaults.items():
+    _h2h_league = sv.get("league", sv.get("h2h_league", _ALL_LEAGUES_LABEL))
+    if _h2h_league in _LEAGUE_ALL_LABELS:
+        _h2h_league = _ALL_LEAGUES_LABEL
+    _defaults["h2h_league"] = _h2h_league
+    _h2h_odds = {
+        "h2h_oh_min": float(sv.get("odds_home_min", 1.0)),
+        "h2h_oh_max": float(sv.get("odds_home_max", 99.0)),
+        "h2h_od_min": float(sv.get("odds_draw_min", 1.0)),
+        "h2h_od_max": float(sv.get("odds_draw_max", 99.0)),
+        "h2h_oa_min": float(sv.get("odds_away_min", 1.0)),
+        "h2h_oa_max": float(sv.get("odds_away_max", 99.0)),
+    }
+    for key, val in {**_defaults, **_h2h_odds}.items():
         if key not in st.session_state:
             st.session_state[key] = val
 
@@ -245,10 +273,30 @@ def _sync_sv_to_h2h_widgets(sv: dict):
         ("h2h_min_goals_home", "h2h_min_goals_home"),
         ("h2h_min_goals_away", "h2h_min_goals_away"),
         ("h2h_venue", "h2h_venue"),
-        ("h2h_league", "h2h_league"),
     ):
         if src in sv:
             st.session_state[dst] = sv[src]
+    if sv.get("league") is not None:
+        league_key = "h2h_league"
+        use_all_key = f"{league_key}_use_all"
+        if sv["league"] == _ALL_LEAGUES_LABEL:
+            st.session_state[use_all_key] = True
+            all_leagues = _get_leagues() or []
+            if all_leagues and st.session_state.get(league_key) == _ALL_LEAGUES_LABEL:
+                st.session_state[league_key] = all_leagues[0]
+        else:
+            st.session_state[use_all_key] = False
+            st.session_state[league_key] = sv["league"]
+    for src, dst in (
+        ("odds_home_min", "h2h_oh_min"),
+        ("odds_home_max", "h2h_oh_max"),
+        ("odds_draw_min", "h2h_od_min"),
+        ("odds_draw_max", "h2h_od_max"),
+        ("odds_away_min", "h2h_oa_min"),
+        ("odds_away_max", "h2h_oa_max"),
+    ):
+        if src in sv and sv[src] is not None:
+            st.session_state[dst] = float(sv[src])
 
 
 def _sync_sv_to_prematch_widgets(screen: str, sv: dict):
@@ -395,6 +443,13 @@ _SCREEN_SIDEBAR_THEMES = {
         "accent_light": "#f0abfc",
         "accent_hover": "#f5d0fe",
         "accent_dark": "#c026d3",
+    },
+    "riepilogo": {
+        "style": "flat",
+        "accent": "#f472b6",
+        "accent_light": "#f9a8d4",
+        "accent_hover": "#fbcfe8",
+        "accent_dark": "#db2777",
     },
 }
 
@@ -1074,7 +1129,7 @@ def render_filter_sidebar(screen: str, saved_filter_values: dict = None) -> dict
                 if key in _saved_screen:
                     sv[key] = _saved_screen[key]
     else:
-        DONOR_SCREENS = ["live", "prematch", "h2h", "simulator", "timeline"]
+        DONOR_SCREENS = ["live", "prematch", "h2h", "simulator", "timeline", "riepilogo"]
         for key in SHARED_KEYS:
             if key not in sv:
                 for donor in DONOR_SCREENS:
@@ -1098,6 +1153,8 @@ def render_filter_sidebar(screen: str, saved_filter_values: dict = None) -> dict
         filters = _render_prematch_filters(screen, sv)
     elif screen == "timeline":
         filters = _render_prematch_filters(screen, sv)
+    elif screen == "riepilogo":
+        filters = _render_prematch_filters(screen, sv)
     elif screen == "live":
         filters = _render_live_filters(sv)
     elif screen == "h2h":
@@ -1113,6 +1170,15 @@ def render_filter_sidebar(screen: str, saved_filter_values: dict = None) -> dict
         if screen == "prematch":
             analyze_bottom = st.sidebar.button(
                 "⚡ ANALISI RAPIDA", key=f"{screen}_analyze_btn", use_container_width=True
+            )
+            col_a, col_s = st.sidebar.columns(2)
+            with col_a:
+                apply = st.button("🔍 APPLICA", key=f"{screen}_apply_btn", use_container_width=True)
+            with col_s:
+                save = st.button("💾 SALVA", key=f"{screen}_save_btn", use_container_width=True)
+        elif screen == "riepilogo":
+            analyze_bottom = st.sidebar.button(
+                "📊 AGGIORNA RIEPILOGO", key=f"{screen}_analyze_btn", use_container_width=True
             )
             col_a, col_s = st.sidebar.columns(2)
             with col_a:
@@ -1584,6 +1650,107 @@ def render_league_picker(
     return selected_league
 
 
+def _league_default_from_sv(sv: dict) -> str:
+    league = sv.get("league", _ALL_LEAGUES_LABEL)
+    if league in _LEAGUE_ALL_LABELS:
+        return _ALL_LEAGUES_LABEL
+    legacy = sv.get("h2h_league")
+    if legacy and legacy not in _LEAGUE_ALL_LABELS:
+        return legacy
+    return league
+
+
+def _init_odds_widget_keys(widget_keys: tuple[str, str, str, str, str, str], sv: dict) -> None:
+    oh_min_k, oh_max_k, od_min_k, od_max_k, oa_min_k, oa_max_k = widget_keys
+    defaults = {
+        oh_min_k: float(sv.get("odds_home_min", 1.0)),
+        oh_max_k: float(sv.get("odds_home_max", 99.0)),
+        od_min_k: float(sv.get("odds_draw_min", 1.0)),
+        od_max_k: float(sv.get("odds_draw_max", 99.0)),
+        oa_min_k: float(sv.get("odds_away_min", 1.0)),
+        oa_max_k: float(sv.get("odds_away_max", 99.0)),
+    }
+    for key, val in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = val
+
+
+def _render_odds_1x2_inputs(widget_keys: tuple[str, str, str, str, str, str]) -> dict:
+    oh_min_k, oh_max_k, od_min_k, od_max_k, oa_min_k, oa_max_k = widget_keys
+    col1, col2, col3 = st.sidebar.columns(3)
+    with col1:
+        st.markdown('<p class="quota-col-label">1 (Casa)</p>', unsafe_allow_html=True)
+        oh_min = st.number_input("oh_min", 1.0, 99.0,
+                                 step=0.1, format="%.2f", key=oh_min_k,
+                                 label_visibility="collapsed")
+        st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
+                    unsafe_allow_html=True)
+        oh_max = st.number_input("oh_max", 1.0, 99.0,
+                                 step=0.1, format="%.2f", key=oh_max_k,
+                                 label_visibility="collapsed")
+    with col2:
+        st.markdown('<p class="quota-col-label">X (Pareggio)</p>', unsafe_allow_html=True)
+        od_min = st.number_input("od_min", 1.0, 99.0,
+                                 step=0.1, format="%.2f", key=od_min_k,
+                                 label_visibility="collapsed")
+        st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
+                    unsafe_allow_html=True)
+        od_max = st.number_input("od_max", 1.0, 99.0,
+                                 step=0.1, format="%.2f", key=od_max_k,
+                                 label_visibility="collapsed")
+    with col3:
+        st.markdown('<p class="quota-col-label">2 (Trasferta)</p>', unsafe_allow_html=True)
+        oa_min = st.number_input("oa_min", 1.0, 99.0,
+                                 step=0.1, format="%.2f", key=oa_min_k,
+                                 label_visibility="collapsed")
+        st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
+                    unsafe_allow_html=True)
+        oa_max = st.number_input("oa_max", 1.0, 99.0,
+                                 step=0.1, format="%.2f", key=oa_max_k,
+                                 label_visibility="collapsed")
+    return {
+        "odds_home_min": oh_min, "odds_home_max": oh_max,
+        "odds_draw_min": od_min, "odds_draw_max": od_max,
+        "odds_away_min": oa_min, "odds_away_max": oa_max,
+    }
+
+
+def _render_sidebar_standard_header(
+    screen: str,
+    sv: dict,
+    *,
+    league_key: str,
+    odds_widget_keys: tuple[str, str, str, str, str, str],
+    analyze_label: str | None = None,
+    analyze_key: str | None = None,
+) -> dict:
+    """Intestazione sidebar condivisa: Campionato → Quote 1X2 → (opz.) Analisi."""
+    filters: dict = {}
+    _init_odds_widget_keys(odds_widget_keys, sv)
+
+    _sidebar_label("🌍 Campionato")
+    filters["league"] = render_league_picker(
+        key=league_key,
+        default=_league_default_from_sv(sv),
+        include_all=True,
+    )
+    if league_key == "h2h_league":
+        filters["h2h_league"] = filters["league"]
+
+    _sidebar_label("💰 Quote 1X2")
+    filters.update(_render_odds_1x2_inputs(odds_widget_keys))
+
+    if analyze_label:
+        btn_key = analyze_key or f"{screen}_analyze_btn_top"
+        st.sidebar.markdown('<div class="sidebar-card analyze-btn">', unsafe_allow_html=True)
+        filters["_top_analyze"] = st.sidebar.button(
+            analyze_label, key=btn_key, use_container_width=True,
+        )
+        st.sidebar.markdown("</div>", unsafe_allow_html=True)
+
+    return filters
+
+
 def _render_prematch_filters(screen: str, sv: dict) -> dict:
     filters = {}
 
@@ -1594,96 +1761,23 @@ def _render_prematch_filters(screen: str, sv: dict) -> dict:
             _sync_sv_to_prematch_widgets(screen, sv)
             _init_prematch_widgets(screen, sv)
 
-    # 1. Campionato
-    _sidebar_label("🌍 Campionato")
-    filters["league"] = render_league_picker(
-        key=f"{screen}_league",
-        default=sv.get("league", _ALL_LEAGUES_LABEL),
-        include_all=True,
+    odds_keys = (
+        f"{screen}_oh_min", f"{screen}_oh_max",
+        f"{screen}_od_min", f"{screen}_od_max",
+        f"{screen}_oa_min", f"{screen}_oa_max",
     )
+    filters.update(_render_sidebar_standard_header(
+        screen, sv,
+        league_key=f"{screen}_league",
+        odds_widget_keys=odds_keys,
+        analyze_label=(
+            "⚡ ANALISI RAPIDA" if screen == "prematch"
+            else "📊 AGGIORNA RIEPILOGO" if screen == "riepilogo"
+            else "🔍 ANALIZZA"
+        ),
+    ))
 
-    # 2. Periodo
-    _sidebar_label("📅 Periodo")
-    col_d1, col_arrow, col_d2 = st.sidebar.columns([5, 1, 5])
-    with col_d1:
-        date_from = st.date_input("Da", value=sv.get("date_from", pd.Timestamp("2010-01-01")),
-                                  key=f"{screen}_date_from", label_visibility="collapsed")
-    with col_arrow:
-        st.markdown('<div class="sidebar-accent-text" style="text-align:center;padding-top:8px;font-size:1rem;">→</div>',
-                    unsafe_allow_html=True)
-    with col_d2:
-        date_to = st.date_input("A", value=sv.get("date_to", pd.Timestamp("2030-12-31")),
-                                key=f"{screen}_date_to", label_visibility="collapsed")
-    filters["date_from"] = date_from
-    filters["date_to"]   = date_to
-
-    # 3. Squadre
-    _sidebar_label("🛡️ Squadre")
-    selected_league = filters.get("league", "Tutte le competizioni")
-    if selected_league and selected_league != "Tutte le competizioni":
-        all_teams = _get_teams_by_league(selected_league)
-    else:
-        all_teams = _get_all_teams()
-    team_opts   = ["Tutte le squadre"] + all_teams
-    home_key = f"{screen}_home_team"
-    away_key = f"{screen}_away_team"
-    if st.session_state.get(home_key) not in team_opts:
-        st.session_state[home_key] = "Tutte le squadre"
-    if st.session_state.get(away_key) not in team_opts:
-        st.session_state[away_key] = "Tutte le squadre"
-    col_h, col_vs, col_a = st.sidebar.columns([5, 2, 5])
-    with col_h:
-        home_t = st.selectbox("Casa", team_opts,
-                              key=home_key, label_visibility="collapsed")
-    with col_vs:
-        st.markdown('<div class="sidebar-accent-text" style="text-align:center;font-weight:700;padding-top:8px;">VS</div>',
-                    unsafe_allow_html=True)
-    with col_a:
-        away_t = st.selectbox("Trasferta", team_opts,
-                              key=away_key, label_visibility="collapsed")
-    filters["home_team"] = None if home_t == "Tutte le squadre" else home_t
-    filters["away_team"] = None if away_t == "Tutte le squadre" else away_t
-
-    # 4. Quote 1X2
-    _sidebar_label("💰 Quote 1X2")
-    col1, col2, col3 = st.sidebar.columns(3)
-    with col1:
-        st.markdown('<p class="quota-col-label">1 (Casa)</p>', unsafe_allow_html=True)
-        oh_min = st.number_input("oh_min", 1.0, 99.0,
-                                 step=0.1, format="%.2f", key=f"{screen}_oh_min",
-                                 label_visibility="collapsed")
-        st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
-                    unsafe_allow_html=True)
-        oh_max = st.number_input("oh_max", 1.0, 99.0,
-                                 step=0.1, format="%.2f", key=f"{screen}_oh_max",
-                                 label_visibility="collapsed")
-    with col2:
-        st.markdown('<p class="quota-col-label">X (Pareggio)</p>', unsafe_allow_html=True)
-        od_min = st.number_input("od_min", 1.0, 99.0,
-                                 step=0.1, format="%.2f", key=f"{screen}_od_min",
-                                 label_visibility="collapsed")
-        st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
-                    unsafe_allow_html=True)
-        od_max = st.number_input("od_max", 1.0, 99.0,
-                                 step=0.1, format="%.2f", key=f"{screen}_od_max",
-                                 label_visibility="collapsed")
-    with col3:
-        st.markdown('<p class="quota-col-label">2 (Trasferta)</p>', unsafe_allow_html=True)
-        oa_min = st.number_input("oa_min", 1.0, 99.0,
-                                 step=0.1, format="%.2f", key=f"{screen}_oa_min",
-                                 label_visibility="collapsed")
-        st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
-                    unsafe_allow_html=True)
-        oa_max = st.number_input("oa_max", 1.0, 99.0,
-                                 step=0.1, format="%.2f", key=f"{screen}_oa_max",
-                                 label_visibility="collapsed")
-    filters.update({
-        "odds_home_min": oh_min, "odds_home_max": oh_max,
-        "odds_draw_min": od_min, "odds_draw_max": od_max,
-        "odds_away_min": oa_min, "odds_away_max": oa_max,
-    })
-
-    # 5. Filtri avanzati (expanders)
+    # 3. Filtri avanzati (expanders)
     _sidebar_label("📂 Filtri dettagliati")
 
     # ── QUOTE OVER ────────────────────────────────────────────────────────
@@ -1929,14 +2023,56 @@ def _render_prematch_filters(screen: str, sv: dict) -> dict:
                             key=f"{screen}_roi", label_visibility="collapsed")
             filters["roi_min"] = roi
 
+    # 4. Filtri campione (periodo + squadre)
+    _sidebar_divider()
+    _sidebar_label("🔎 Filtri")
+    _sidebar_label("📅 Periodo")
+    col_d1, col_arrow, col_d2 = st.sidebar.columns([5, 1, 5])
+    with col_d1:
+        date_from = st.date_input("Da", value=sv.get("date_from", pd.Timestamp("2010-01-01")),
+                                  key=f"{screen}_date_from", label_visibility="collapsed")
+    with col_arrow:
+        st.markdown('<div class="sidebar-accent-text" style="text-align:center;padding-top:8px;font-size:1rem;">→</div>',
+                    unsafe_allow_html=True)
+    with col_d2:
+        date_to = st.date_input("A", value=sv.get("date_to", pd.Timestamp("2030-12-31")),
+                                key=f"{screen}_date_to", label_visibility="collapsed")
+    filters["date_from"] = date_from
+    filters["date_to"]   = date_to
+
+    _sidebar_label("🛡️ Squadre")
+    selected_league = filters.get("league", "Tutte le competizioni")
+    if selected_league and selected_league != "Tutte le competizioni":
+        all_teams = _get_teams_by_league(selected_league)
+    else:
+        all_teams = _get_all_teams()
+    team_opts   = ["Tutte le squadre"] + all_teams
+    home_key = f"{screen}_home_team"
+    away_key = f"{screen}_away_team"
+    if st.session_state.get(home_key) not in team_opts:
+        st.session_state[home_key] = "Tutte le squadre"
+    if st.session_state.get(away_key) not in team_opts:
+        st.session_state[away_key] = "Tutte le squadre"
+    col_h, col_vs, col_a = st.sidebar.columns([5, 2, 5])
+    with col_h:
+        home_t = st.selectbox("Casa", team_opts,
+                              key=home_key, label_visibility="collapsed")
+    with col_vs:
+        st.markdown('<div class="sidebar-accent-text" style="text-align:center;font-weight:700;padding-top:8px;">VS</div>',
+                    unsafe_allow_html=True)
+    with col_a:
+        away_t = st.selectbox("Trasferta", team_opts,
+                              key=away_key, label_visibility="collapsed")
+    filters["home_team"] = None if home_t == "Tutte le squadre" else home_t
+    filters["away_team"] = None if away_t == "Tutte le squadre" else away_t
+
     return filters
 
 
 def _render_live_filters(sv: dict) -> dict:
     """
     Live sidebar — ordine logico:
-    1. Campionato → 2. Minuto di gioco → 3. Gol segnati → 4. Risultato
-    → 5. Quote 1X2 → 6. Strategie avanzate
+    1. Campionato → 2. Quote 1X2 → 3. Minuto di gioco → 4. Gol segnati → 5. Risultato
     """
     filters = {}
 
@@ -1954,8 +2090,8 @@ def _render_live_filters(sv: dict) -> dict:
         "live_goal_min_0":    str(_sv_mins[0]) if len(_sv_mins) > 0 and _sv_mins[0] else "",
         "live_goal_min_1":    str(_sv_mins[1]) if len(_sv_mins) > 1 and _sv_mins[1] else "",
         "live_goal_min_2":    str(_sv_mins[2]) if len(_sv_mins) > 2 and _sv_mins[2] else "",
-        "live_minute_slider": int(sv.get("current_minute", 45)),
-        "live_match_minute":    int(sv.get("current_minute", 45)),
+        "live_minute_slider": max(1, int(sv.get("current_minute", 1))),
+        "live_match_minute":    max(1, int(sv.get("current_minute", 1))),
         "live_match_second":    0,
         "live_timer_running":   False,
         "live_timer_speed":     1,
@@ -1968,19 +2104,24 @@ def _render_live_filters(sv: dict) -> dict:
         _sync_shared_odds_widgets("live")
         if st.session_state.get("filters_analyzed"):
             _sync_sv_to_live_widgets(sv)
+        st.session_state.live_minute_slider = 1
+        st.session_state.live_match_minute = 1
+        st.session_state.live_match_second = 0
+        st.session_state.live_timer_running = False
 
     _init_live_goal_team_widgets(sv)
 
+    filters.update(_render_sidebar_standard_header(
+        "live", sv,
+        league_key="live_league",
+        odds_widget_keys=(
+            "live_oh_min", "live_oh_max",
+            "live_od_min", "live_od_max",
+            "live_oa_min", "live_oa_max",
+        ),
+    ))
 
-    # 1. Campionato
-    _live_card_title("🌍 Campionato")
-    filters["league"] = render_league_picker(
-        key="live_league",
-        default=sv.get("league", _ALL_LEAGUES_LABEL),
-        include_all=True,
-    )
-
-    # 2. Minuto di gioco (timer)
+    # Minuto di gioco (timer)
     _live_card_title("⚡ Minuto di gioco")
 
     tp1, tp2 = st.sidebar.columns(2)
@@ -1999,7 +2140,7 @@ def _render_live_filters(sv: dict) -> dict:
     )
 
     running = bool(st.session_state.get("live_timer_running"))
-    match_min = int(st.session_state.get("live_match_minute", 45))
+    match_min = max(1, int(st.session_state.get("live_match_minute", 1)))
     match_sec = int(st.session_state.get("live_match_second", 0))
 
     if running:
@@ -2032,7 +2173,7 @@ def _render_live_filters(sv: dict) -> dict:
     filters["current_second"] = match_sec
     filters["timer_running"] = running
 
-    # 3. Gol segnati
+    # Gol segnati
     _live_card_title("⚽ Gol segnati")
 
     def _parse_goal_minute(text):
@@ -2121,7 +2262,7 @@ def _render_live_filters(sv: dict) -> dict:
     filters["home_score"] = int(home_score)
     filters["away_score"] = int(away_score)
 
-    # 4. Risultato attuale
+    # Risultato attuale
     _live_card_title("🏆 Risultato attuale")
     _score_box = 'live-score-box'
     score_cols = st.sidebar.columns(3)
@@ -2156,133 +2297,6 @@ def _render_live_filters(sv: dict) -> dict:
             unsafe_allow_html=True,
         )
 
-    # 5. Quote 1X2 (prematch di riferimento)
-    _live_card_title("💰 Quote 1X2")
-    odds_cols = st.sidebar.columns(3)
-    with odds_cols[0]:
-        st.markdown('<div class="sidebar-accent-text" style="text-align:center;font-size:0.8rem;'
-                    'font-weight:800;margin-bottom:2px;">1</div>', unsafe_allow_html=True)
-        oh_min = st.number_input(
-            "o1_min", 1.0, 99.0,
-            step=0.05, format="%.2f", key="live_oh_min", label_visibility="collapsed",
-        )
-        st.markdown('<p class="sidebar-label" style="text-align:center;margin:0">—</p>',
-                    unsafe_allow_html=True)
-        oh_max = st.number_input(
-            "o1_max", 1.0, 99.0,
-            step=0.05, format="%.2f", key="live_oh_max", label_visibility="collapsed",
-        )
-    with odds_cols[1]:
-        st.markdown('<div style="text-align:center;font-size:0.8rem;color:#f1f5f9;'
-                    'font-weight:800;margin-bottom:2px;">X</div>', unsafe_allow_html=True)
-        od_min = st.number_input(
-            "ox_min", 1.0, 99.0,
-            step=0.05, format="%.2f", key="live_od_min", label_visibility="collapsed",
-        )
-        st.markdown('<p class="sidebar-label" style="text-align:center;margin:0">—</p>',
-                    unsafe_allow_html=True)
-        od_max = st.number_input(
-            "ox_max", 1.0, 99.0,
-            step=0.05, format="%.2f", key="live_od_max", label_visibility="collapsed",
-        )
-    with odds_cols[2]:
-        st.markdown('<div style="text-align:center;font-size:0.8rem;color:#ef4444;'
-                    'font-weight:800;margin-bottom:2px;">2</div>', unsafe_allow_html=True)
-        oa_min = st.number_input(
-            "o2_min", 1.0, 99.0,
-            step=0.05, format="%.2f", key="live_oa_min", label_visibility="collapsed",
-        )
-        st.markdown('<p class="sidebar-label" style="text-align:center;margin:0">—</p>',
-                    unsafe_allow_html=True)
-        oa_max = st.number_input(
-            "o2_max", 1.0, 99.0,
-            step=0.05, format="%.2f", key="live_oa_max", label_visibility="collapsed",
-        )
-
-    filters.update({
-        "odds_home_min": oh_min, "odds_home_max": oh_max,
-        "odds_draw_min": od_min, "odds_draw_max": od_max,
-        "odds_away_min": oa_min, "odds_away_max": oa_max,
-    })
-
-    # 6. Strategie avanzate
-    _live_card_title("🔥 Advanced Overs")
-    st.sidebar.caption("Split staking Over 2.5 · fasi e gestione live")
-    if "live_odds_over25" not in st.session_state:
-        st.session_state["live_odds_over25"] = float(sv.get("odds_over25", 2.10))
-    if "live_current_over_odds" not in st.session_state:
-        st.session_state["live_current_over_odds"] = float(sv.get("current_over_odds", 3.20))
-    if "_pending_live_over_phase" in st.session_state:
-        st.session_state["live_over_phase"] = st.session_state.pop("_pending_live_over_phase")
-    over_phase = st.sidebar.selectbox(
-        "Fase strategia",
-        ["WAIT", "ENTERED", "PHASE_3"],
-        key="live_over_phase",
-        label_visibility="collapsed",
-    )
-    oc1, oc2 = st.sidebar.columns(2)
-    with oc1:
-        odds_over25 = st.number_input(
-            "Over 2.5 base",
-            min_value=1.01,
-            max_value=20.0,
-            step=0.01,
-            format="%.2f",
-            key="live_odds_over25",
-            label_visibility="collapsed",
-        )
-    with oc2:
-        current_over_odds = st.number_input(
-            "Over live",
-            min_value=1.01,
-            max_value=20.0,
-            step=0.01,
-            format="%.2f",
-            key="live_current_over_odds",
-            label_visibility="collapsed",
-        )
-    st.sidebar.caption("Quota base · Quota Over live")
-    over_pnl = st.sidebar.slider(
-        "PnL corrente (× stake)",
-        min_value=-1.0,
-        max_value=1.0,
-        value=float(st.session_state.get("live_over_pnl", 0.0)),
-        step=0.05,
-        key="live_over_pnl",
-        label_visibility="collapsed",
-    )
-    over_goal = st.sidebar.checkbox("Gol appena segnato", key="live_over_goal")
-    os1, os2 = st.sidebar.columns(2)
-    with os1:
-        shots_2t = st.number_input(
-            "Tiri in porta 2T",
-            min_value=0,
-            max_value=20,
-            value=int(st.session_state.get("live_over_shots_2t", 0)),
-            step=1,
-            key="live_over_shots_2t",
-            label_visibility="collapsed",
-        )
-    with os2:
-        attack_rating = st.slider(
-            "Rating attacco",
-            min_value=0.0,
-            max_value=1.0,
-            value=float(st.session_state.get("live_over_rating", 0.5)),
-            step=0.05,
-            key="live_over_rating",
-            label_visibility="collapsed",
-        )
-    filters.update({
-        "over_phase": over_phase,
-        "odds_over25": float(odds_over25),
-        "current_over_odds": float(current_over_odds),
-        "over_pnl": float(over_pnl),
-        "over_goal": bool(over_goal),
-        "shots_on_target_2T": int(shots_2t),
-        "attack_rating": float(attack_rating),
-    })
-
     return filters
 
 
@@ -2303,7 +2317,7 @@ def _h2h_quick_insight_html(home: str, away: str, league: str = "") -> str:
         if not rows:
             raise ValueError("no data")
         df = pd.DataFrame(rows)
-        if league and league not in ("Tutte le competizioni", "Tutti", "Tutte"):
+        if league and league not in _LEAGUE_ALL_LABELS:
             if "league" in df.columns:
                 df = df[df["league"] == league]
         r = analyze_h2h(df, home, away)
@@ -2338,18 +2352,30 @@ def _render_h2h_filters(sv: dict) -> dict:
     filters = {}
 
     _init_h2h_widgets(sv)
-    if st.session_state.get("_filter_page_entered") and st.session_state.get("filters_analyzed"):
-        _sync_sv_to_h2h_widgets(sv)
+    if st.session_state.get("_filter_page_entered"):
+        _sync_shared_odds_widgets("h2h")
+        if st.session_state.get("filters_analyzed"):
+            _sync_sv_to_h2h_widgets(sv)
 
-    selected_league = st.session_state.get("h2h_league", "Tutti i campionati")
-    if selected_league and selected_league not in ("Tutti i campionati", "Tutti", "Tutte"):
+    filters.update(_render_sidebar_standard_header(
+        "h2h", sv,
+        league_key="h2h_league",
+        odds_widget_keys=(
+            "h2h_oh_min", "h2h_oh_max",
+            "h2h_od_min", "h2h_od_max",
+            "h2h_oa_min", "h2h_oa_max",
+        ),
+    ))
+
+    selected_league = filters.get("league", _ALL_LEAGUES_LABEL)
+    if selected_league and selected_league not in _LEAGUE_ALL_LABELS:
         teams = _get_teams_by_league(selected_league) or []
     else:
         teams = _get_teams() or _get_all_teams()
 
     if not teams:
         st.sidebar.warning("Nessuna squadra disponibile per questo campionato.")
-        return {}
+        return filters
 
     prev_league = st.session_state.get("_h2h_prev_league")
     if prev_league != selected_league:
@@ -2361,7 +2387,7 @@ def _render_h2h_filters(sv: dict) -> dict:
 
     _init_h2h_widgets(sv, teams)
 
-    _live_card_title("🏟️ Campo & campionato")
+    _live_card_title("🏟️ Tipo scontro")
     filters["h2h_venue"] = st.sidebar.selectbox(
         "Scontri da includere",
         [
@@ -2371,13 +2397,6 @@ def _render_h2h_filters(sv: dict) -> dict:
         ],
         key="h2h_venue",
         help="Filtra se la squadra casa ha giocato in casa, in trasferta, o entrambi.",
-    )
-    leagues = ["Tutti i campionati"] + (_get_leagues() or [])
-    filters["h2h_league"] = st.sidebar.selectbox(
-        "Campionato",
-        leagues,
-        key="h2h_league",
-        help="Tutti i campionati = tutte le squadre. Altrimenti solo quelle del campionato scelto.",
     )
 
     _live_card_title("⚔️ Squadre")

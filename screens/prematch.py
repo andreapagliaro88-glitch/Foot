@@ -763,9 +763,8 @@ def render():
                 scores.append(("-", 0, 0.0))
             top3_cum = round(score_counts.head(3).sum() / n * 100, 1) if n > 0 else 0.0
             top5_cum = round(score_counts.head(5).sum() / n * 100, 1) if n > 0 else 0.0
+            top5_count = int(score_counts.head(5).sum()) if n > 0 else 0
             best_score = scores[0][0] if scores[0][0] != "-" else None
-            best_count = scores[0][1] if scores else 0
-            best_pct = scores[0][2] if scores else 0.0
             tight_g, wide_g = _cluster_scores(score_counts)
 
             top5_rows = ""
@@ -803,14 +802,14 @@ def render():
                         <div style="font-size:9px; color:#64748b; text-transform:uppercase;
                                     letter-spacing:0.8px; margin-bottom:3px;">ESITI PRINCIPALI</div>
                         <div style="color:{header_color}; font-size:26px; font-weight:800; line-height:1;">
-                            {best_pct:.1f}%
+                            {top5_cum:.1f}%
                         </div>
                         <div style="color:#64748b; font-size:10px; margin-top:4px;">
-                            {best_count} partite
+                            {top5_count} partite (top 5)
                         </div>
                         <div style="margin-top:10px; font-size:10px; color:#64748b; line-height:1.6;">
                             <div>TOP 3 cumulativo: <span style="color:#cbd5e1; font-weight:600;">{top3_cum}%</span></div>
-                            <div>TOP 5 cumulativo: <span style="color:#cbd5e1; font-weight:600;">{top5_cum}%</span></div>
+                            <div>Più probabile: <span style="color:#f59e0b; font-weight:600;">{scores[0][0]} ({scores[0][2]}%)</span></div>
                         </div>
                         <div style="margin-top:8px; font-size:10px; color:#64748b; line-height:1.5;">
                             <div>🎯 Stretti (±1): <span style="color:#94a3b8;">{tight_g}%</span></div>

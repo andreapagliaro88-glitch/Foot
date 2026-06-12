@@ -406,8 +406,10 @@ def render():
             f"Migliore: **{best['strategy']}** — ROI **{best['roi']}%**, "
             f"profit **{best['profit']:.2f}€** su **{int(best['total_bets'])}** bet."
         )
+        display_ranking = ranking.rename(columns={"avg_odds": "quota"})
         st.dataframe(
-            ranking.style.format({
+            display_ranking.style.format({
+                "quota": "@{:.2f}",
                 "roi": "{:.2f}%",
                 "profit": "{:.2f}",
                 "strike_rate": "{:.1f}%",

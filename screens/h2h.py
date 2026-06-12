@@ -89,8 +89,8 @@ def _filter_h2h_matches(df: pd.DataFrame, home: str, away: str, filters: dict) -
     if h2h.empty:
         return h2h
 
-    league = filters.get("h2h_league", "Tutti i campionati")
-    if league and league not in ("Tutti i campionati", "Tutti", "Tutte") and "league" in h2h.columns:
+    league = filters.get("h2h_league", filters.get("league", "Tutti i campionati"))
+    if league and league not in ("Tutte le competizioni", "Tutti i campionati", "Tutti", "Tutte") and "league" in h2h.columns:
         h2h = h2h[h2h["league"] == league]
 
     if "match_date" in h2h.columns:
@@ -169,8 +169,8 @@ def _filter_summary(filters: dict, n: int, total_db: int) -> str:
     venue = filters.get("h2h_venue", "Tutti gli scontri")
     if venue != "Tutti gli scontri":
         parts.append(venue.lower())
-    league = filters.get("h2h_league", "Tutti i campionati")
-    if league and league not in ("Tutti i campionati", "Tutti", "Tutte"):
+    league = filters.get("h2h_league", filters.get("league", "Tutti i campionati"))
+    if league and league not in ("Tutte le competizioni", "Tutti i campionati", "Tutti", "Tutte"):
         parts.append(f"campionato <b>{league}</b>")
     last_n = filters.get("h2h_last_n", "Tutte")
     if last_n and last_n != "Tutte":

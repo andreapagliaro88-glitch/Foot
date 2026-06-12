@@ -48,6 +48,15 @@ def _derive_form(recent_points: list[int]) -> str:
     return "STABILE"
 
 
+def form_sample_label(n: int) -> str:
+    """Etichetta campione forma coerente con il filtro Campione in sidebar."""
+    if n <= 0:
+        return "forma"
+    if n == 1:
+        return "1 partita"
+    return f"{n} partite"
+
+
 # Soglie confidenza — campione casa/trasferta è ~metà delle partite totali
 _CONFIDENCE_THRESHOLDS = {
     "all":  {"alta": 40, "media": 20},
@@ -257,6 +266,9 @@ def analyze_team_dna(
     empty = {
         "team": team_name,
         "matches": 0,
+        "total_scored": 0,
+        "total_conceded": 0,
+        "form_window": 0,
         "form": "N/D",
         "style": "N/D",
         "style_profile": {},
@@ -371,7 +383,8 @@ def analyze_team_dna(
     btts_pct = round(btts_n / n * 100, 1)
     clean_sheet_pct = round(clean_sheets / n * 100, 1)
 
-    form = _derive_form(recent_points[:10])
+    form_window = len(recent_points)
+    form = _derive_form(recent_points)
     avg_goal_min = round(float(np.mean(goal_minutes)), 1) if goal_minutes else float("nan")
     concede_2h_pct = round(concede_2h_n / concede_n * 100, 1) if concede_n else 0.0
     score_1h_pct = round(scored_1h_n / n * 100, 1)
@@ -402,12 +415,15 @@ def analyze_team_dna(
         "form": form,
         "style": style_profile["style"],
         "style_profile": style_profile,
+        "total_scored": int(total_scored),
+        "total_conceded": int(total_conceded),
         "goal_profile": {
             "score_1h_pct": score_1h_pct,
             "score_first_pct": score_first_pct,
             "avg_goal_minute": avg_goal_min,
             "score_2h_pct": round(scored_2h_n / n * 100, 1),
             "avg_scored": round(avg_scored, 2),
+            "total_scored": int(total_scored),
             "late_goals_pct": late_goals_pct,
         },
         "defensive": {
@@ -416,6 +432,7 @@ def analyze_team_dna(
             "concede_2h_pct": concede_2h_pct,
             "concede_after_75_pct": round(concede_after_75_n / n * 100, 1),
             "avg_conceded": round(avg_conceded, 2),
+            "total_conceded": int(total_conceded),
         },
         "rhythm": {
             "over_25_pct": over_25_pct,
@@ -431,7 +448,8 @@ def analyze_team_dna(
         },
         "odds_market": odds_market,
         "market": market,
-        "recent_form_pts": round(sum(recent_points[:10]) / min(len(recent_points), 10), 2) if recent_points else 0,
+        "form_window": form_window,
+        "recent_form_pts": round(sum(recent_points) / form_window, 2) if form_window else 0,
     }
     dna["interpretation"] = generate_dna_interpretation(dna)
     return dna
@@ -468,7 +486,8 @@ def generate_dna_interpretation(dna: dict) -> dict:
         risks.append("Ritmo spesso basso — attenzione agli under")
 
     if dna.get("form") == "POSITIVA":
-        positives.append("Forma recente positiva (ultime 10)")
+        fw = int(dna.get("form_window", 0) or 0)
+        positives.append(f"Forma recente positiva ({form_sample_label(fw)})")
     elif dna.get("form") == "NEGATIVA":
         risks.append("Forma recente negativa")
 
@@ -574,8 +593,14 @@ def build_dna_compare_rows(dna_a: dict, dna_b: dict, name_a: str, name_b: str) -
 
     fa = float(dna_a.get("recent_form_pts", 0) or 0)
     fb = float(dna_b.get("recent_form_pts", 0) or 0)
+    fa_w = int(dna_a.get("form_window", 0) or 0)
+    fb_w = int(dna_b.get("form_window", 0) or 0)
+    if fa_w == fb_w and fa_w > 0:
+        form_row_label = f"Forma (pt/partita, {form_sample_label(fa_w)})"
+    else:
+        form_row_label = "Forma (pt/partita)"
     rows.insert(0, {
-        "label": "Forma (pt/partita ultime 10)",
+        "label": form_row_label,
         "value_a": fa,
         "value_b": fb,
         "suffix": "",

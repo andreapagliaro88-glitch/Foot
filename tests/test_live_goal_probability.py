@@ -52,9 +52,22 @@ def test_build_future_intervals_and_best():
         _row("30", ""),      # nessun gol dopo 55
     ])
     t10 = build_future_intervals(df, 55, 10)
-    assert "55-65" in t10 or "55-60" in t10
+    assert "50-60" in t10
     best_key, best_val = get_best_interval(t10)
     assert best_val["pct"] > 0
+
+    t5 = build_future_intervals(df, 27, 5)
+    assert "25-30" in t5
+    t10_27 = build_future_intervals(df, 27, 10)
+    assert "20-30" in t10_27
+    t15_27 = build_future_intervals(df, 27, 15)
+    assert "16-30" in t15_27
+    assert "45+" in t5
+    assert "45+" in t10_27
+    assert "45+" in t15_27
+    assert "90+" in t5
+    assert "90+" in t10
+    assert "90+" in t15_27
 
     cum = prob_goal_within_minutes(df, 55, 10)
     assert cum["with_goal"] == 2

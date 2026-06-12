@@ -591,6 +591,22 @@ def calculate_drawdown(history: list[float]) -> float:
     return round(max_dd, 2)
 
 
+def average_odds_from_sim(sim: dict) -> float | None:
+    """Quota media effettiva usata nelle bet simulate."""
+    details = sim.get("bet_details") or []
+    odds = [
+        float(d["odds_used"])
+        for d in details
+        if d.get("odds_used") is not None and float(d["odds_used"]) > 1
+    ]
+    if odds:
+        return round(float(np.mean(odds)), 2)
+    lay = sim.get("lay_00_odds")
+    if lay is not None and float(lay) > 1:
+        return round(float(lay), 2)
+    return None
+
+
 def calculate_losing_streak(results: list[float]) -> int:
     max_streak = 0
     current = 0
@@ -691,6 +707,7 @@ def find_best_strategy(
         sim = run_simulation(df, cfg, stake=stake, bankroll_start=bankroll_start)
         rows.append({
             "strategy": name,
+            "avg_odds": average_odds_from_sim(sim),
             "roi": sim["roi"],
             "profit": sim["profit"],
             "total_bets": sim["total_bets"],
@@ -699,5 +716,5 @@ def find_best_strategy(
             "losing_streak": calculate_losing_streak(sim["results"]),
         })
     if not rows:
-        return pd.DataFrame(columns=["strategy", "roi", "profit", "total_bets"])
+        return pd.DataFrame(columns=["strategy", "avg_odds", "roi", "profit", "total_bets"])
     return pd.DataFrame(rows).sort_values("roi", ascending=False).reset_index(drop=True)

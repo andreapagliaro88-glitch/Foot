@@ -52,15 +52,9 @@ from calculations import (
     calc_post_goal_future_analysis,
     generate_live_trigger,
 )
-from advanced_over_strategy import (
-    AdvancedOverStrategy,
-    STRATEGY_NAME as ADV_OVER_NAME,
-    DEFAULT_CONFIG as ADV_OVER_CONFIG,
-    build_live_data,
-    build_live_state,
-)
 from screens.roi_dashboard import render_roi_dashboard
 from screens.momentum_chart import render_similar_momentum_block
+from screens.first_goal_outcome import render_first_goal_outcome_block
 from utils import format_pct, get_sorted_goals_with_team
 
 # ── Palette — matches prematch.py exactly ─────────────────────────────────────
@@ -708,113 +702,6 @@ def _render_live_signal_card(data: dict, scorer_label: str) -> None:
     )
 
 
-def _render_advanced_over_trading(
-    filters: dict,
-    current_minute: int,
-    home_score: int,
-    away_score: int,
-) -> None:
-    """Advanced Overs Trading — split staking Over 2.5 in-play."""
-    strategy = AdvancedOverStrategy()
-    phase = filters.get("over_phase", "WAIT")
-    orders_key = "live_over_orders_cache"
-
-    if phase == "WAIT":
-        state = build_live_state(phase="WAIT")
-    else:
-        cached_orders = st.session_state.get(orders_key)
-        state = build_live_state(phase=phase, orders=cached_orders)
-
-    data = build_live_data(
-        odds_over25=float(filters.get("odds_over25") or 2.10),
-        current_odds=float(filters.get("current_over_odds") or 3.20),
-        pnl=float(filters.get("over_pnl") or 0.0),
-        goal=bool(filters.get("over_goal")),
-        minute=current_minute,
-        shots_on_target_2t=int(filters.get("shots_on_target_2T") or 0),
-        attack_rating=float(filters.get("attack_rating") or 0.5),
-    )
-
-    result = strategy.evaluate(state, data)
-    if result.get("orders"):
-        st.session_state[orders_key] = result["orders"]
-
-    action = result.get("action") or result.get("phase", "HOLD")
-    new_phase = result.get("phase", phase)
-    if new_phase != phase:
-        st.session_state["_pending_live_over_phase"] = new_phase
-
-    action_styles = {
-        "ENTER":            (C_GREEN2, "🔥 SPLIT STAKING ATTIVO"),
-        "HOLD":             (C_BLUE2,  "🔄 MANTIENI POSIZIONE"),
-        "REMOVE_RISK":      (C_YELLOW, "🛡️ TOGLI RISCHIO"),
-        "CASHOUT_PARTIAL":  (C_GREEN2, "💰 CASHOUT PARZIALE"),
-        "FULL_CASHOUT":     (C_GREEN2, "✅ CASHOUT TOTALE"),
-        "GO_TO_PHASE_3":    (C_RED,    "🚨 FASE 3 — LOSS 60%"),
-        "ENTER_OVER_NEXT":  (C_ORANGE, "⚡ EXTRA OVER 3.5"),
-        "EXIT_LOSS":        (C_RED,    "❌ EXIT LOSS CONTROLLATA"),
-        "ENTERED":          (C_BLUE2,  "📋 ORDINI ATTIVI"),
-        "WAIT":             (C_MUTED,  "⏳ IN ATTESA ENTRY"),
-        "PHASE_3":          (C_ORANGE, "🔥 FASE 3 ATTIVA"),
-    }
-    accent, action_lbl = action_styles.get(action, (C_MUTED, str(action)))
-
-    orders = result.get("orders") or st.session_state.get(orders_key) or []
-    matched_n = sum(1 for o in orders if o.get("matched"))
-    order_rows = ""
-    for o in orders:
-        status = "✅" if o.get("matched") else "⏳"
-        order_rows += (
-            f'<div style="font-size:11px;color:{C_TEXT};display:flex;'
-            f'justify-content:space-between;padding:3px 0;">'
-            f'<span>{status} BACK Over 2.5 @{o["odds"]:.1f}</span>'
-            f'<span style="color:{C_MUTED};">stake {o["stake"]:.0%}</span></div>'
-        )
-
-    msg = result.get("msg") or result.get("reason") or result.get("action", "")
-    cfg = ADV_OVER_CONFIG
-    detail_rows = [
-        ("Fase", new_phase),
-        ("Ordini matchati", f"{matched_n}/{len(orders)}"),
-        ("PnL", f"{data['pnl']:+.2f}×"),
-        ("Tiri in porta 2T", str(data["shots_on_target_2T"])),
-        ("Rating attacco", f"{data['attack_rating']:.0%}"),
-        ("Over base", f"@{data['odds_over25']:.2f}"),
-        ("Over live", f"@{data['current_odds']:.2f}"),
-        ("Loss cut", f"{cfg['loss_cut']:.0%}"),
-    ]
-    metrics_html = "".join(
-        f'<div style="background:#0f172a;border:1px solid #1f2937;border-radius:8px;'
-        f'padding:10px;text-align:center;">'
-        f'<div style="font-size:10px;color:{C_MUTED};text-transform:uppercase;">{lbl}</div>'
-        f'<div style="font-size:14px;font-weight:700;color:{C_TEXT};margin-top:4px;">{val}</div>'
-        f'</div>'
-        for lbl, val in detail_rows[:8]
-    )
-
-    st.markdown(
-        f'<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;'
-        f'padding:14px 16px;margin-bottom:10px;">'
-        f'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
-        f'<div>'
-        f'<div style="font-size:11px;color:{C_MUTED};">🔥 {ADV_OVER_NAME}</div>'
-        f'<div style="font-size:22px;font-weight:900;color:{accent};margin-top:4px;">{action_lbl}</div>'
-        f'<div style="font-size:11px;color:{C_MUTED};margin-top:4px;">{msg}</div>'
-        f'</div>'
-        f'<div style="font-size:11px;color:{C_MUTED};text-align:right;">'
-        f'Minuto {current_minute}\' · {home_score}-{away_score}<br>'
-        f'Livelli: {", ".join(str(x) for x in cfg["split_levels"])}'
-        f'</div></div>'
-        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;">'
-        f'{metrics_html}</div>'
-        f'<div style="margin-top:12px;padding-top:10px;border-top:1px solid #1f2937;">'
-        f'<div style="font-size:10px;color:{C_MUTED};margin-bottom:6px;">ORDINI SPLIT</div>'
-        f'{order_rows or f"<div style=font-size:11px;color:{C_MUTED};>Nessun ordine</div>"}'
-        f'</div></div>',
-        unsafe_allow_html=True,
-    )
-
-
 def _render_post_goal_analysis_block(
     matches_df,
     reference_minute: int,
@@ -1002,7 +889,7 @@ def render():
     filters = render_filter_sidebar("live")
 
     # Extract values from filter dict (set by new sidebar)
-    current_minute  = int(filters.get("current_minute", 45))
+    current_minute  = max(1, int(filters.get("current_minute", 1)))
     current_second  = int(filters.get("current_second", 0))
     home_score      = int(filters.get("home_score", 0))
     away_score      = int(filters.get("away_score", 0))
@@ -1377,6 +1264,14 @@ def render():
             )
 
         # ═══════════════════════════════════════════════════════════════
+        # SEZIONE 2c — ESITO FINALE DOPO IL PRIMO GOL
+        # ═══════════════════════════════════════════════════════════════
+        _fgo_min = first_goal_min
+        if _fgo_min is None and filters.get("valid_goals"):
+            _fgo_min = filters["valid_goals"][0][0]
+        render_first_goal_outcome_block(filtered, goal_events)
+
+        # ═══════════════════════════════════════════════════════════════
         # SEZIONE 3 — PROIEZIONE LIVE (intervalli dinamici 5/10/15 min)
         # ═══════════════════════════════════════════════════════════════
         _render_live_projection_block(
@@ -1596,14 +1491,6 @@ def render():
         <div style="font-size:11px;color:{C_MUTED};margin-top:4px;">{total_p} pattern attivi su 3 rilevati</div>
         {_CARD_END}
         """, unsafe_allow_html=True)
-
-        # ═══════════════════════════════════════════════════════════════
-        # SEZIONE 6b — ADVANCED OVERS TRADING
-        # ═══════════════════════════════════════════════════════════════
-        st.markdown("<br>", unsafe_allow_html=True)
-        _render_advanced_over_trading(
-            filters, current_minute, home_score, away_score,
-        )
 
         # ═══════════════════════════════════════════════════════════════
         # SEZIONE 7 — ROI SIMULAZIONE LIVE

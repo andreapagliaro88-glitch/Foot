@@ -178,8 +178,8 @@ def get_half(minute: int, original_token: str = "") -> int:
     """
     Determines which half a goal belongs to.
 
-    - "45'x" format → half 1 (1st half injury time)
-    - "90'x" format → half 2 (2nd half injury time)
+    - "45'x" / "45+x" → half 1 (recupero 1° tempo)
+    - "90'x" / "90+x" → half 2 (recupero 2° tempo)
     - plain minute 1-45  → half 1
     - plain minute 46+   → half 2
     """
@@ -190,7 +190,35 @@ def get_half(minute: int, original_token: str = "") -> int:
             return 1 if base == 45 else 2
         except ValueError:
             pass
+    if "+" in token_str:
+        try:
+            base = int(token_str.split("+")[0])
+            if base == 45:
+                return 1
+            if base >= 90:
+                return 2
+        except ValueError:
+            pass
     return 1 if minute <= 45 else 2
+
+
+def is_stoppage_goal(minute: int, original_token: str = "", half: int | None = None) -> bool:
+    """True se il gol è in recupero 1T (45+) o 2T (90+)."""
+    token_str = str(original_token).strip()
+    if "'" in token_str:
+        try:
+            base = int(token_str.split("'")[0])
+            return base == 45 or base >= 90
+        except ValueError:
+            pass
+    if "+" in token_str:
+        try:
+            base = int(token_str.split("+")[0])
+            return base == 45 or base >= 90
+        except ValueError:
+            pass
+    h = half if half is not None else get_half(minute, original_token)
+    return (h == 1 and minute > 45) or (h == 2 and minute > 90)
 
 
 def format_pct(value) -> str:

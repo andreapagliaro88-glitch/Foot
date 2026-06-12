@@ -333,6 +333,7 @@ def _render_upload():
 
 # ── Top navigation header (GOAL EDGE) ────────────────────────
 TOP_PAGES = {
+    "RIEPILOGO":        "riepilogo",
     "PREMATCH":         "prematch",
     "LIVE":             "live",
     "TESTA A TESTA":    "h2h",
@@ -344,6 +345,7 @@ _NAV_LABELS = list(TOP_PAGES.keys())
 
 # color, bg, hover_color, hover_bg
 _NAV_TAB_THEME = {
+    "riepilogo": ("#f472b6", "rgba(244,114,182,0.14)", "#f9a8d4", "rgba(244,114,182,0.22)"),
     "prematch":  ("#3b82f6", "rgba(59,130,246,0.14)", "#60a5fa", "rgba(59,130,246,0.22)"),
     "live":      ("#22c55e", "rgba(34,197,94,0.14)",  "#4ade80", "rgba(34,197,94,0.22)"),
     "h2h":       ("#f59e0b", "rgba(245,158,11,0.14)", "#fbbf24", "rgba(245,158,11,0.22)"),
@@ -448,6 +450,9 @@ if page_key == "pattern":
 # ── Render selected page ───────────────────────────────────────────────────
 if page_key == "upload":
     _render_upload()
+elif page_key == "riepilogo":
+    from screens.riepilogo import render
+    render()
 elif page_key == "prematch":
     from screens.prematch import render
     render()

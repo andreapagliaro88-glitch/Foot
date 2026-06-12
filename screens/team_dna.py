@@ -13,15 +13,17 @@ from database import get_all_matches, get_goal_events_for_matches
 from filters import (
     _get_teams_by_league,
     _get_all_teams,
+    _load_shared_odds_into_sv,
+    _render_sidebar_standard_header,
     _sidebar_label,
     prepare_screen_sidebar,
-    render_league_picker,
 )
 from team_dna import (
     DNA_RED_ONLY_METRICS,
     DNA_ZONES,
     analyze_team_dna,
     build_dna_highlight_map,
+    form_sample_label,
 )
 from utils import team_logo_html
 
@@ -289,7 +291,13 @@ def _render_header(team: str, dna: dict, highlights: dict | None = None, side: s
         </div>
         <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap;font-size:13px;">
             <span>📊 Partite: <b style="color:{C_TEXT};">{dna['matches']}</b></span>
+            <span>⚽ Gol fatti: <b style="color:{C_TEXT};">{dna.get('total_scored', 0)}</b></span>
+            <span>🥅 Gol subiti: <b style="color:{C_TEXT};">{dna.get('total_conceded', 0)}</b></span>
             <span>📈 Forma: <b style="color:{form_color};">{form}{form_badge}</b></span>
+        </div>
+        <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap;font-size:13px;margin-top:8px;">
+            <span>⚽ Media gol fatti: <b style="color:{C_TEXT};">{dna.get('goal_profile', {}).get('avg_scored', 0)}</b></span>
+            <span>📉 Media gol subiti: <b style="color:{C_TEXT};">{dna.get('defensive', {}).get('avg_conceded', 0)}</b></span>
         </div>
         <div style="font-size:11px;color:{C_MUTED2};margin-top:10px;">
             📍 {dna.get('venue_label', 'Tutte le partite')}
@@ -414,6 +422,7 @@ def _render_team_column(
     st.html(_render_timing(dna["timing"], highlights, side_key))
     st.html(_render_interpretation(dna["interpretation"], team))
     pts = dna.get("recent_form_pts", 0)
+    form_lbl = form_sample_label(int(dna.get("form_window", 0) or 0))
     pts_cmp = _cmp_status(highlights, side_key, "_root", "recent_form_pts")
     if pts_cmp == "win":
         pts_color, pts_badge = C_GREEN, " ▲"
@@ -425,17 +434,13 @@ def _render_team_column(
         pts_color, pts_badge = C_TEXT, ""
     st.markdown(
         f'<p style="font-size:12px;color:{C_MUTED};margin:4px 0 0;">'
-        f'Forma ultime 10: <span style="color:{pts_color};font-weight:700;">{pts}{pts_badge}</span> pt/partita</p>',
+        f'Forma ({form_lbl}): <span style="color:{pts_color};font-weight:700;">{pts}{pts_badge}</span> pt/partita</p>',
         unsafe_allow_html=True,
     )
 
 
 def _render_compare_view(dna_a: dict, dna_b: dict, team_a: str, team_b: str):
     highlights = build_dna_highlight_map(dna_a, dna_b)
-    st.caption(
-        "📍 Casa / Trasferta · 🟢 migliore · 🟡 **Giallo =** pari · "
-        "🔴 peggiore solo su *Da sfavorita* e *Defensive DNA*"
-    )
     col_home, col_away = st.columns(2, gap="large")
     with col_home:
         with st.container():
@@ -472,8 +477,9 @@ def _render_single_view(team: str, dna: dict):
     with c4:
         st.html(_render_timing(dna["timing"]))
     st.html(_render_interpretation(dna["interpretation"], team))
+    form_lbl = form_sample_label(int(dna.get("form_window", 0) or 0))
     st.caption(
-        f"Forma ultime 10: **{dna.get('recent_form_pts', 0)}** pt/partita · "
+        f"Forma ({form_lbl}): **{dna.get('recent_form_pts', 0)}** pt/partita · "
         f"Riutilizzabile in **LIVE** per hedge / lay dopo lettura timing DNA."
     )
 
@@ -482,8 +488,27 @@ def _render_dna_sidebar() -> dict:
     """Sidebar dedicata: lega, squadra, ultime N partite."""
     prepare_screen_sidebar("dna")
 
-    _sidebar_label("🌍 Campionato")
-    league = render_league_picker(key="dna_league", include_all=True)
+    sv = dict(st.session_state.get("_saved_filters_prematch", {}))
+    sv.update(st.session_state.get("_saved_filters_dna", {}))
+    _load_shared_odds_into_sv(sv)
+    if st.session_state.get("filters_analyzed"):
+        for donor in ("prematch", "live", "h2h", "simulator", "timeline"):
+            donor_saved = st.session_state.get(f"_saved_filters_{donor}", {})
+            for key in ("league", "odds_home_min", "odds_home_max",
+                        "odds_draw_min", "odds_draw_max", "odds_away_min", "odds_away_max"):
+                if key in donor_saved:
+                    sv[key] = donor_saved[key]
+
+    filters = _render_sidebar_standard_header(
+        "dna", sv,
+        league_key="dna_league",
+        odds_widget_keys=(
+            "dna_oh_min", "dna_oh_max",
+            "dna_od_min", "dna_od_max",
+            "dna_oa_min", "dna_oa_max",
+        ),
+    )
+    league = filters.get("league")
 
     if league and league != "Tutte le competizioni":
         teams = sorted(_get_teams_by_league(league) or [])
@@ -492,7 +517,7 @@ def _render_dna_sidebar() -> dict:
 
     if not teams:
         st.sidebar.warning("Nessuna squadra disponibile.")
-        return {}
+        return filters
 
     _sidebar_label("⚙️ Modalità")
     mode = st.sidebar.radio(
@@ -535,15 +560,15 @@ def _render_dna_sidebar() -> dict:
         label_visibility="collapsed",
     )[1]
 
-    return {
-        "league": league,
+    filters.update({
         "team": team,
         "team_a": team_a,
         "team_b": team_b,
         "compare_mode": compare_mode,
         "last_n": last_n if last_n > 0 else None,
         "_apply": True,
-    }
+    })
+    return filters
 
 
 def render():

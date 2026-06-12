@@ -624,14 +624,14 @@ INTERVALS_1T = {
     "0-15":  (0, 15),
     "16-30": (16, 30),
     "31-45": (31, 45),
-    "45+":   (46, 60),
+    "45+":   (None, None),  # solo recupero 1T (45'x, 45+x, half=1 e minute>45)
 }
 
 INTERVALS_2T = {
     "46-60": (46, 60),
     "61-75": (61, 75),
     "76-90": (76, 90),
-    "90+":   (91, 120),
+    "90+":   (None, None),  # solo recupero 2T (90'x, 90+x, half=2 e minute>90)
 }
 
 
@@ -641,10 +641,41 @@ def _events_for_match(goal_events, match_id):
     return [e for e in goal_events if e.get("match_id") == match_id]
 
 
-def _count_goals_in_interval(events, start: int, end: int) -> int:
+def _event_half(event: dict) -> int:
+    minute = _parse_minute(event.get("minute", 0))
+    half = event.get("half")
+    if half in (1, 2):
+        return int(half)
+    return 1 if minute <= 45 else 2
+
+
+def _goal_in_match_interval(event: dict, interval_name: str, start, end) -> bool:
+    """
+    Assegna un gol alla fascia corretta rispettando il tempo (half).
+    45+ = solo recupero 1T; 90+ = solo recupero 2T.
+  """
+    minute = _parse_minute(event.get("minute", 0))
+    half = _event_half(event)
+
+    if interval_name in ("0-15", "16-30", "31-45", "45+"):
+        if half != 1:
+            return False
+    elif interval_name in ("46-60", "61-75", "76-90", "90+"):
+        if half != 2:
+            return False
+
+    if interval_name == "45+":
+        return minute > 45
+    if interval_name == "90+":
+        return minute > 90
+
+    return start is not None and end is not None and start <= minute <= end
+
+
+def _count_goals_in_interval(events, interval_name: str, start, end) -> int:
     return sum(
         1 for e in events
-        if start <= _parse_minute(e.get("minute", 0)) <= end
+        if _goal_in_match_interval(e, interval_name, start, end)
     )
 
 
@@ -652,6 +683,7 @@ def _calculate_interval_distribution(goal_events, match_ids: list, intervals: di
     """
     Per ogni intervallo: conta gol per match, classifica 0/1/2/3+,
     calcola % su N match. ge1 = pct_1 + pct_2 + pct_3plus.
+    45+/90+ contano solo gol di recupero (da token 45'x / 90'x in CSV).
     """
     n = len(match_ids)
     empty = {"0_gol": 0.0, "1_gol": 0.0, "2_gol": 0.0, "3plus": 0.0, "ge1": 0.0}
@@ -663,7 +695,7 @@ def _calculate_interval_distribution(goal_events, match_ids: list, intervals: di
     for mid in match_ids:
         events = _events_for_match(goal_events, mid)
         for name, (start, end) in intervals.items():
-            g = _count_goals_in_interval(events, start, end)
+            g = _count_goals_in_interval(events, name, start, end)
             if g == 0:
                 distribution[name]["0"] += 1
             elif g == 1:
@@ -712,9 +744,9 @@ def calculate_at_least_one_goal_half_pct(goal_events, match_ids: list) -> tuple:
     count_2t = 0
     for mid in match_ids:
         events = _events_for_match(goal_events, mid)
-        if any(_parse_minute(e.get("minute", 0)) <= 45 for e in events):
+        if any(_event_half(e) == 1 for e in events):
             count_1t += 1
-        if any(_parse_minute(e.get("minute", 0)) > 45 for e in events):
+        if any(_event_half(e) == 2 for e in events):
             count_2t += 1
 
     return round(count_1t / n * 100, 1), round(count_2t / n * 100, 1)
@@ -730,9 +762,8 @@ def calculate_goals_by_interval(goal_events, match_ids: list, intervals: dict) -
     for mid in match_ids:
         events = _events_for_match(goal_events, mid)
         for e in events:
-            minute = _parse_minute(e.get("minute", 0))
             for name, (start, end) in intervals.items():
-                if start <= minute <= end:
+                if _goal_in_match_interval(e, name, start, end):
                     if e.get("is_home", 0) == 1:
                         dist[name]["home"] += 1
                     else:
@@ -2334,20 +2365,8 @@ def _match_goals_with_raw(home_str: str, away_str: str) -> list[tuple[int, str]]
 
 def _is_stoppage_goal(minute: int, raw: str, half: int) -> bool:
     """Riconosce gol in recupero 1T (45+) o 2T (90+) dal token originale."""
-    raw_s = str(raw).strip()
-    if "'" in raw_s:
-        try:
-            base = int(raw_s.split("'")[0])
-            return (half == 1 and base == 45) or (half == 2 and base >= 90)
-        except ValueError:
-            pass
-    if "+" in raw_s:
-        try:
-            base = int(raw_s.split("+")[0])
-            return (half == 1 and base == 45) or (half == 2 and base >= 90)
-        except ValueError:
-            pass
-    return (half == 1 and minute > 45) or (half == 2 and minute > 90)
+    from utils import is_stoppage_goal
+    return is_stoppage_goal(minute, raw, half)
 
 
 def _goal_in_fixed_interval(minute: int, raw: str, key: str, start, end) -> bool:
@@ -2517,27 +2536,110 @@ def generate_live_trigger(
     }
 
 
+_FOOTBALL_15_SEQUENCE = [
+    ("0-15", 0, 15, "reg"),
+    ("16-30", 16, 30, "reg"),
+    ("31-45", 31, 45, "reg"),
+    ("45+", 45, 45, "45+"),
+    ("46-60", 46, 60, "reg"),
+    ("61-75", 61, 75, "reg"),
+    ("76-90", 76, 90, "reg"),
+    ("90+", 90, 999, "90+"),
+]
+
+
+def _bucket_still_future(input_minute: int, kind: str, lo: int, hi: int) -> bool:
+    if kind == "45+":
+        return input_minute < 46
+    if kind == "90+":
+        return input_minute < 91
+    return hi > input_minute
+
+
+def _build_step_bucket_sequence(input_minute: int, step: int) -> list[tuple[str, int, int, str]]:
+    """
+    Fasce future allineate (5/10 min) o calcistiche (15 min), con 45+ e 90+.
+    Ritorna (key, lo, hi, kind) con kind in reg | 45+ | 90+.
+    """
+    m = int(input_minute)
+    if step == 15:
+        return [
+            (key, lo, hi, kind)
+            for key, lo, hi, kind in _FOOTBALL_15_SEQUENCE
+            if _bucket_still_future(m, kind, lo, hi)
+        ]
+
+    seq: list[tuple[str, int, int, str]] = []
+    start = (m // step) * step
+    need_45 = m < 46
+
+    while start < 90:
+        end = min(start + step, 90)
+
+        if start < 45 and end > 45:
+            if start < 45:
+                seq.append((f"{start}-45", start, 45, "reg"))
+            if need_45:
+                seq.append(("45+", 45, 45, "45+"))
+                need_45 = False
+            start = 46
+            continue
+
+        if start == 45 and need_45:
+            seq.append(("45+", 45, 45, "45+"))
+            need_45 = False
+            start = 46
+            continue
+
+        key = f"{start}-{end}" if end < 90 else f"{start}-90"
+        seq.append((key, start, end, "reg"))
+        start = end
+
+    if m < 91:
+        seq.append(("90+", 90, 999, "90+"))
+
+    return seq
+
+
+def _goals_with_raw(home_t: str, away_t: str) -> list[tuple[int, str]]:
+    goals: list[tuple[int, str]] = []
+    for minute, raw in parse_goal_timings(home_t or ""):
+        goals.append((minute, raw))
+    for minute, raw in parse_goal_timings(away_t or ""):
+        goals.append((minute, raw))
+    return goals
+
+
+def _future_goal_in_bucket(
+    goals: list[tuple[int, str]],
+    input_minute: int,
+    kind: str,
+    lo: int,
+    hi: int,
+) -> bool:
+    future = [(gm, raw) for gm, raw in goals if gm > input_minute]
+    if kind == "45+":
+        return any(get_half(gm, raw) == 1 and gm > 45 for gm, raw in future)
+    if kind == "90+":
+        return any(get_half(gm, raw) == 2 and gm > 90 for gm, raw in future)
+    return any(lo < gm <= hi for gm, raw in future)
+
+
 def build_future_intervals(
     matches_df: pd.DataFrame,
     input_minute: int,
     step: int,
 ) -> dict:
     """
-    Intervalli futuri dal minuto corrente: % partite con ≥1 gol in (start, end].
-    Keys es. '55-60', '60-65', …, '90+'.
+    Intervalli futuri allineati a fasce fisse (5/10/15 min), non dal minuto esatto.
+    Include sempre 45+ (recupero 1T) e 90+ (recupero 2T) quando ancora rilevanti.
+    Es. al 27': 5 min → 25-30 … 45+ … 90+.
     """
-    intervals = {}
-    start = int(input_minute)
+    intervals: dict = {}
+    input_minute = int(input_minute)
+    buckets = _build_step_bucket_sequence(input_minute, step)
 
-    while start < 91:
-        end = start + step
-        if start >= 90:
-            key = "90+"
-            end_hi = 999
-        else:
-            end_hi = min(end, 90)
-            key = f"{start}-{end_hi}" if end_hi < 90 or end <= 90 else f"{start}-90"
-
+    for key, lo, hi, kind in buckets:
         total = goal_in_range = 0
         for _, row in matches_df.iterrows():
             home_t = row.get("home_goal_timings", "") or ""
@@ -2546,13 +2648,9 @@ def build_future_intervals(
                 home_t = ""
             if pd.isna(away_t):
                 away_t = ""
-            all_goals = get_all_goals(str(home_t), str(away_t))
-            future_goals = [g for g in all_goals if g > input_minute]
+            goals = _goals_with_raw(str(home_t), str(away_t))
             total += 1
-            if start >= 90:
-                if any(g > 90 for g in future_goals):
-                    goal_in_range += 1
-            elif any(start < g <= end_hi for g in future_goals):
+            if _future_goal_in_bucket(goals, input_minute, kind, lo, hi):
                 goal_in_range += 1
 
         pct = round(goal_in_range / total * 100, 1) if total else 0.0
@@ -2561,9 +2659,6 @@ def build_future_intervals(
             "goals": goal_in_range,
             "pct": pct,
         }
-        if start >= 90:
-            break
-        start += step
 
     return intervals
 
@@ -2751,3 +2846,200 @@ def calc_live_roi_simulation(
         ],
     }
     return roi_data, n
+
+
+# ── Esito finale dopo il primo gol ─────────────────────────────────────────
+
+FIRST_GOAL_OUTCOME_TIMEFRAMES = ["0-15", "15-30", "30-45", "45-60", "60-75", "75-90"]
+
+
+def get_first_goal_outcome_timeframe(minute: int) -> str:
+    """Fascia oraria del primo gol (minuti inclusivi)."""
+    m = int(minute)
+    if m <= 15:
+        return "0-15"
+    if m <= 30:
+        return "15-30"
+    if m <= 45:
+        return "30-45"
+    if m <= 60:
+        return "45-60"
+    if m <= 75:
+        return "60-75"
+    return "75-90"
+
+
+def _match_final_result(row) -> str | None:
+    """home_win | draw | away_win da ft_result o gol FT."""
+    ft = str(row.get("ft_result") or "").strip().upper()
+    if ft in ("H", "1", "HOME"):
+        return "home_win"
+    if ft in ("D", "X", "DRAW"):
+        return "draw"
+    if ft in ("A", "2", "AWAY"):
+        return "away_win"
+
+    hf = row.get("home_goals_ft")
+    af = row.get("away_goals_ft")
+    if hf is None or af is None or pd.isna(hf) or pd.isna(af):
+        return None
+    hf, af = float(hf), float(af)
+    if hf > af:
+        return "home_win"
+    if hf == af:
+        return "draw"
+    return "away_win"
+
+
+def build_first_goal_outcome_dataset(
+    matches_df: pd.DataFrame,
+    goal_events: dict | None = None,
+) -> list[dict]:
+    """
+    Estrae per ogni partita:
+    {first_goal_minute, first_goal_team: home|away, final_result: home_win|draw|away_win}
+    """
+    from utils import get_first_goal_from_timings
+
+    if matches_df is None or matches_df.empty:
+        return []
+
+    records = []
+    for _, row in matches_df.iterrows():
+        fg = None
+        mid = row.get("match_id")
+        if mid is not None and goal_events:
+            events = goal_events.get(int(mid), [])
+            if events:
+                fg = get_first_goal_from_events(events)
+
+        if not fg:
+            home_t = row.get("home_goal_timings", "") or ""
+            away_t = row.get("away_goal_timings", "") or ""
+            if pd.isna(home_t):
+                home_t = ""
+            if pd.isna(away_t):
+                away_t = ""
+            fg = get_first_goal_from_timings(str(home_t), str(away_t))
+
+        if not fg:
+            continue
+
+        final = _match_final_result(row)
+        if not final:
+            continue
+
+        minute = int(fg["minute"])
+        team = fg["team"]
+        records.append({
+            "minute": minute,
+            "team": team,
+            "result": final,
+            "timeframe": get_first_goal_outcome_timeframe(minute),
+            # alias retrocompatibili
+            "first_goal_minute": minute,
+            "first_goal_team": team,
+            "final_result": final,
+        })
+    return records
+
+
+def _empty_first_goal_outcome_stats() -> dict:
+    empty_side = {"win": 0, "draw": 0, "lose": 0, "total": 0}
+    return {
+        tf: {"home": dict(empty_side), "away": dict(empty_side)}
+        for tf in FIRST_GOAL_OUTCOME_TIMEFRAMES
+    }
+
+
+def calc_first_goal_outcome_stats(matches: list[dict]) -> dict:
+    """Aggrega esiti finali per fascia e per chi segna il primo gol."""
+    stats = _empty_first_goal_outcome_stats()
+    for row in matches:
+        tf = row.get("timeframe") or get_first_goal_outcome_timeframe(
+            row.get("minute", row.get("first_goal_minute", 0))
+        )
+        team = row.get("team", row.get("first_goal_team"))
+        result = row.get("result", row.get("final_result"))
+        if team not in ("home", "away") or not result:
+            continue
+
+        stats[tf][team]["total"] += 1
+
+        if team == "home":
+            if result == "home_win":
+                stats[tf][team]["win"] += 1
+            elif result == "draw":
+                stats[tf][team]["draw"] += 1
+            else:
+                stats[tf][team]["lose"] += 1
+        else:
+            if result == "away_win":
+                stats[tf][team]["win"] += 1
+            elif result == "draw":
+                stats[tf][team]["draw"] += 1
+            else:
+                stats[tf][team]["lose"] += 1
+    return stats
+
+
+def first_goal_outcome_pct(part: int, total: int) -> float:
+    return round((part / total) * 100, 1) if total > 0 else 0.0
+
+
+def get_first_goal_outcome_percentages(data: dict) -> dict:
+    """Percentuali win/draw/lose per un bucket (home o away)."""
+    total = data.get("total", 0)
+    return {
+        "win": first_goal_outcome_pct(data.get("win", 0), total),
+        "draw": first_goal_outcome_pct(data.get("draw", 0), total),
+        "lose": first_goal_outcome_pct(data.get("lose", 0), total),
+        "total": total,
+    }
+
+
+def first_goal_probability_color(pct: float) -> str:
+    """Colore testo: alta ≥65%, media 45–65%, bassa <45%."""
+    if pct >= 65:
+        return "#22c55e"
+    if pct >= 45:
+        return "#f59e0b"
+    return "#ef4444"
+
+
+def get_first_goal_outcome_decision(minute: int, team: str, stats: dict) -> dict:
+    """Decision engine live: SEGUI / NEUTRO / LAY FORTE."""
+    tf = get_first_goal_outcome_timeframe(minute)
+    data = stats.get(tf, {}).get(team, {})
+    p = get_first_goal_outcome_percentages(data)
+    win = p["win"]
+
+    if win >= 70:
+        decision = "✅ SEGUI"
+        hint = "Dominio storico alto — evita lay sulla squadra che ha segnato."
+    elif win >= 55:
+        decision = "⚖️ NEUTRO"
+        hint = "Valuta il mercato: probabilità in zona intermedia."
+    else:
+        decision = "🔥 LAY FORTE"
+        lay_target = "CASA" if team == "home" else "TRASFERTA"
+        hint = f"Valuta se esiste valore di mercato per LAY {lay_target}."
+
+    return {
+        "timeframe": tf,
+        "win": p["win"],
+        "draw": p["draw"],
+        "lose": p["lose"],
+        "total": p["total"],
+        "decision": decision,
+        "hint": hint,
+    }
+
+
+def calc_home_dominance_drop(stats: dict) -> float:
+    """Drop dominio casa: win% early (0-15) vs late (60-75) quando casa segna per prima."""
+    early = stats.get("0-15", {}).get("home", {})
+    late = stats.get("60-75", {}).get("home", {})
+    early_pct = first_goal_outcome_pct(early.get("win", 0), early.get("total", 0))
+    late_pct = first_goal_outcome_pct(late.get("win", 0), late.get("total", 0))
+    return round(early_pct - late_pct, 1)

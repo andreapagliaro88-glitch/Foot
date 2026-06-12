@@ -105,6 +105,55 @@ def build_similar_match_momentum(
     }
 
 
+def build_momentum_insights(
+    profile: dict,
+    home_team: str,
+    away_team: str,
+) -> list[str]:
+    """2–3 frasi leggibili dal profilo intensità gol."""
+    home = profile.get("home") or []
+    away = profile.get("away") or []
+    if not home or not away:
+        return []
+
+    home_lbl = (home_team or "Casa").strip()
+    away_lbl = (away_team or "Trasferta").strip()
+    if home_lbl in ("Casa", "Tutte le squadre"):
+        home_lbl = "Casa"
+    if away_lbl in ("Trasferta", "Tutte le squadre"):
+        away_lbl = "Trasferta"
+
+    insights: list[str] = []
+    h_avg = sum(home) / len(home)
+    a_avg = sum(away) / len(away)
+
+    if h_avg > a_avg * 1.12:
+        insights.append(f"🏠 {home_lbl} domina il profilo storico")
+    elif a_avg > h_avg * 1.12:
+        insights.append(f"✈️ {away_lbl} più pericolosa in media")
+    else:
+        insights.append("⚖️ Equilibrio tra casa e trasferta")
+
+    first_half = sum(home[:45]) + sum(away[:45])
+    second_half = sum(home[45:]) + sum(away[45:])
+    if second_half > first_half * 1.15:
+        insights.append("📈 2° tempo più vivace nel campione")
+    elif first_half > second_half * 1.15:
+        insights.append("🌅 1° tempo più intenso del solito")
+
+    late = sum(home[75:]) + sum(away[75:])
+    overall = (sum(home) + sum(away)) / 2
+    late_avg = late / 30 if late else 0
+    if late_avg > overall * 0.55:
+        insights.append("🔥 Finale vivace (76'–90')")
+
+    h_peak = home.index(max(home)) + 1
+    a_peak = away.index(max(away)) + 1
+    insights.append(f"⏱ Picchi tipici: {home_lbl} ~{h_peak}' · {away_lbl} ~{a_peak}'")
+
+    return insights[:3]
+
+
 def similar_momentum_fig(
     profile: dict,
     home_team: str,
@@ -274,3 +323,14 @@ def render_similar_momentum_block(
         config={"displayModeBar": False},
         key=chart_key,
     )
+
+    insights = build_momentum_insights(profile, home_team, away_team)
+    if insights:
+        items = "".join(
+            f'<li style="margin:4px 0;color:{C_MUTED};font-size:11px;line-height:1.5;">{txt}</li>'
+            for txt in insights
+        )
+        st.markdown(
+            f'<ul style="margin:8px 0 12px 0;padding-left:18px;list-style:none;">{items}</ul>',
+            unsafe_allow_html=True,
+        )
