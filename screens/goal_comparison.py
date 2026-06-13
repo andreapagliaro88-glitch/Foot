@@ -22,7 +22,7 @@ def render_goal_comparison(pct_1T, pct_2T):
 
         progress_1.html(f"""
         <div style="text-align:center;">
-            <div style="font-size:12px;color:#94a3b8;">1° TEMPO</div>
+            <div style="font-size:12px;color:#cbd5e1;">1° TEMPO</div>
             <div style="
                 width:120px;height:120px;
                 border-radius:50%;
@@ -42,7 +42,7 @@ def render_goal_comparison(pct_1T, pct_2T):
 
         progress_2.html(f"""
         <div style="text-align:center;">
-            <div style="font-size:12px;color:#94a3b8;">2° TEMPO</div>
+            <div style="font-size:12px;color:#cbd5e1;">2° TEMPO</div>
             <div style="
                 width:120px;height:120px;
                 border-radius:50%;
@@ -64,7 +64,7 @@ def render_goal_comparison(pct_1T, pct_2T):
 
     st.html(f"""
     <div class="pm-box" style="padding:12px 8px; margin-top:8px;">
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#cbd5e1;">
             <span>1T</span><span>2T</span>
         </div>
         <div style="background:#1f2937;height:10px;border-radius:6px;overflow:hidden;">

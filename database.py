@@ -37,19 +37,34 @@ def _match_count(db_path: str) -> int:
         conn.close()
 
 
-def _ensure_seeded_database() -> None:
-    """Copia il database seed nel runtime se mancante o vuoto (deploy Streamlit Cloud)."""
+def _ensure_seeded_database() -> bool:
+    """
+    Garantisce football.db aggiornato.
+    Copia dal seed se mancante/vuoto o se il seed contiene più partite (import batch).
+    """
     if not os.path.isfile(SEED_DB_PATH):
-        return
+        return False
 
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    if _match_count(DB_PATH) == 0:
+    runtime_count = _match_count(DB_PATH)
+    seed_count = _match_count(SEED_DB_PATH)
+
+    if runtime_count == 0 and seed_count > 0:
         shutil.copy2(SEED_DB_PATH, DB_PATH)
+        return True
+
+    if seed_count > runtime_count:
+        shutil.copy2(SEED_DB_PATH, DB_PATH)
+        return True
+
+    return False
 
 
 def get_connection():
     """Returns a SQLite connection with row_factory set to Row."""
-    _ensure_seeded_database()
+    upgraded = _ensure_seeded_database()
+    if upgraded:
+        invalidate_db_cache()
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -216,6 +231,24 @@ def get_all_matches():
 def get_all_matches_unfiltered() -> list:
     """Alias di get_all_matches — mantiene compatibilità."""
     return get_all_matches()
+
+
+def _fetch_match_count() -> int:
+    conn = get_connection()
+    try:
+        return int(conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0])
+    finally:
+        conn.close()
+
+
+@st.cache_data(show_spinner=False)
+def _cached_match_count(_db_version: float) -> int:
+    return _fetch_match_count()
+
+
+def get_match_count() -> int:
+    """Numero totale di partite nel database."""
+    return _cached_match_count(_db_mtime())
 
 
 def _fetch_teams() -> list:
@@ -401,12 +434,28 @@ def get_goal_events_for_matches(match_ids: list) -> dict:
 def invalidate_db_cache() -> None:
     """Svuota la cache query dopo import o eliminazione dati."""
     _cached_all_matches.clear()
+    _cached_match_count.clear()
     _cached_teams.clear()
     _cached_leagues.clear()
     _cached_seasons.clear()
     _cached_teams_by_league.clear()
     _cached_league_season_stats.clear()
     _cached_goal_events.clear()
+
+
+def sync_db_cache_on_startup() -> None:
+    """Invalida cache Streamlit se football.db è cambiato (import batch, upload)."""
+    _ensure_seeded_database()
+    current_mtime = _db_mtime()
+    last_mtime = st.session_state.get("_db_mtime_seen")
+    if last_mtime is None:
+        st.session_state["_db_mtime_seen"] = current_mtime
+        return
+    if current_mtime != last_mtime:
+        invalidate_db_cache()
+        st.session_state["_db_mtime_seen"] = current_mtime
+        st.session_state.pop("_pm_data", None)
+        st.session_state.pop("_live_data", None)
 
 
 # ── Saved filters ──────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import numpy as np
 from utils import (
     get_half,
     get_first_goal_from_events,
+    is_stoppage_goal,
     parse_goal_minute_value,
     parse_goal_timings,
     get_all_goals,
@@ -73,17 +74,32 @@ def _lay_odds(back_odds: float) -> float:
 
 
 def _lay_roi(lay_wins: int, lay_losses: int, avg_back_odds: float) -> float:
-    """Lay ROI (Andrea spec): liability = back_odds - 1;
+    """Lay ROI (Andrea spec): liability = lay_best_odds - 1;
     profit = lay_wins * 1 - lay_losses * liability;  ROI = profit / total * 100."""
     total = lay_wins + lay_losses
-    if total == 0 or avg_back_odds is None or (isinstance(avg_back_odds, float) and np.isnan(avg_back_odds)):
+    lay_odds = lay_best_odds(avg_back_odds)
+    if total == 0 or lay_odds is None:
         return float("nan")
-    liability = avg_back_odds - 1.0
+    liability = lay_odds - 1.0
     profit = lay_wins * 1.0 - lay_losses * liability
     return round(profit / total * 100, 1)
 
 
 LAY_00_MIN_ODDS = 10.0
+LAY_ODDS_EDGE = 0.05
+
+
+def lay_best_odds(odds: float | None) -> float | None:
+    """Quota migliore per lay: mercato − 0.05."""
+    if odds is None:
+        return None
+    try:
+        val = float(odds)
+    except (TypeError, ValueError):
+        return None
+    if np.isnan(val) or val <= 1:
+        return None
+    return round(max(val - LAY_ODDS_EDGE, 1.01), 2)
 
 
 def estimate_lay_00_odds(
@@ -652,10 +668,11 @@ def _event_half(event: dict) -> int:
 def _goal_in_match_interval(event: dict, interval_name: str, start, end) -> bool:
     """
     Assegna un gol alla fascia corretta rispettando il tempo (half).
-    45+ = solo recupero 1T; 90+ = solo recupero 2T.
-  """
+    45+ = solo recupero 1T (45'x, 45+x); 90+ = solo recupero 2T (90'x, 90+x).
+    """
     minute = _parse_minute(event.get("minute", 0))
     half = _event_half(event)
+    raw = str(event.get("minute", "") or "")
 
     if interval_name in ("0-15", "16-30", "31-45", "45+"):
         if half != 1:
@@ -665,9 +682,12 @@ def _goal_in_match_interval(event: dict, interval_name: str, start, end) -> bool
             return False
 
     if interval_name == "45+":
-        return minute > 45
+        return is_stoppage_goal(minute, raw, half=1)
     if interval_name == "90+":
-        return minute > 90
+        return is_stoppage_goal(minute, raw, half=2)
+
+    if is_stoppage_goal(minute, raw, half=half):
+        return False
 
     return start is not None and end is not None and start <= minute <= end
 
@@ -822,13 +842,12 @@ def calculate_timing_distribution_total(goal_events, match_ids: list) -> dict:
         for e in events:
             m = _parse_minute(e.get("minute", 0))
             half = e.get("half", 1 if m <= 45 else 2)
+            raw = str(e.get("minute", "") or "")
             is_home = e.get("is_home", 0) == 1
             bucket = None
 
-            if half == 1 and m > 45:
-                bucket = "45+"
-            elif half == 2 and m > 90:
-                bucket = "90+"
+            if is_stoppage_goal(m, raw, half=half):
+                bucket = "45+" if half == 1 else "90+"
             else:
                 for name, (lo, hi) in BUCKETS.items():
                     if name in ("45+", "90+"):
@@ -2363,19 +2382,15 @@ def _match_goals_with_raw(home_str: str, away_str: str) -> list[tuple[int, str]]
     return goals
 
 
-def _is_stoppage_goal(minute: int, raw: str, half: int) -> bool:
-    """Riconosce gol in recupero 1T (45+) o 2T (90+) dal token originale."""
-    from utils import is_stoppage_goal
-    return is_stoppage_goal(minute, raw, half)
-
-
 def _goal_in_fixed_interval(minute: int, raw: str, key: str, start, end) -> bool:
-    """True se il gol cade nella fascia fissa (45+/90+ con recupero)."""
+    """True se il gol cade nella fascia fissa (45+/90+ = solo recupero da token 45'x / 90'x)."""
     if key == "45+":
-        return _is_stoppage_goal(minute, raw, half=1)
+        return is_stoppage_goal(minute, raw, half=1)
     if key == "90+":
-        return _is_stoppage_goal(minute, raw, half=2)
-    return start < minute <= end
+        return is_stoppage_goal(minute, raw, half=2)
+    if is_stoppage_goal(minute, raw):
+        return False
+    return start is not None and end is not None and start < minute <= end
 
 
 def _fixed_future_intervals(input_minute: int) -> list[tuple]:
@@ -2427,12 +2442,14 @@ def calc_post_goal_future_analysis(
 ) -> dict:
     """
     Analisi post-gol: 3 tabelle (totale, casa primo gol, trasferta primo gol).
-    Filtro: abs(primo_gol - input_minute) <= tolerance.
+    Filtro: abs(primo_gol - reference_minute) <= tolerance.
+    Fasce future ancorate al minuto del gol (reference_minute), non al minuto live.
     """
+    goal_minute = int(reference_minute)
     used_tol = tolerance
     for tol in (tolerance, tolerance + 5, tolerance + 10):
         total_matches = filter_by_first_goal_range(
-            matches_df, input_minute, tolerance=tol, team=None,
+            matches_df, goal_minute, tolerance=tol, team=None,
         )
         if len(total_matches) >= 20 or tol == tolerance + 10:
             used_tol = tol
@@ -2445,17 +2462,17 @@ def calc_post_goal_future_analysis(
         ("away", "away"),
     ):
         subset = filter_by_first_goal_range(
-            matches_df, input_minute, tolerance=used_tol, team=team,
+            matches_df, goal_minute, tolerance=used_tol, team=team,
         )
         tables[key] = {
             "count": len(subset),
             "matches": subset,
-            "table": build_dynamic_future_table(subset, input_minute),
+            "table": build_dynamic_future_table(subset, goal_minute),
         }
 
     return {
-        "reference_minute": reference_minute,
-        "input_minute": input_minute,
+        "reference_minute": goal_minute,
+        "input_minute": int(input_minute),
         "tolerance": used_tol,
         "tables": tables,
     }
@@ -2619,10 +2636,13 @@ def _future_goal_in_bucket(
 ) -> bool:
     future = [(gm, raw) for gm, raw in goals if gm > input_minute]
     if kind == "45+":
-        return any(get_half(gm, raw) == 1 and gm > 45 for gm, raw in future)
+        return any(is_stoppage_goal(gm, raw, half=1) for gm, raw in future)
     if kind == "90+":
-        return any(get_half(gm, raw) == 2 and gm > 90 for gm, raw in future)
-    return any(lo < gm <= hi for gm, raw in future)
+        return any(is_stoppage_goal(gm, raw, half=2) for gm, raw in future)
+    return any(
+        lo < gm <= hi and not is_stoppage_goal(gm, raw)
+        for gm, raw in future
+    )
 
 
 def build_future_intervals(
@@ -2726,15 +2746,16 @@ def _calc_roi_row(label, wins, losses, avg_odds):
 
 
 def _calc_lay_row(label, back_wins, back_losses, back_odds):
+    lay_odds = lay_best_odds(back_odds) or back_odds
     lay_wins = back_losses
     lay_losses = back_wins
     total = lay_wins + lay_losses
     if total == 0:
-        return label, total, back_odds, lay_wins, lay_losses, 0.0, 0.0
-    profit = lay_wins - (lay_losses * (back_odds - 1.0))
+        return label, total, lay_odds, lay_wins, lay_losses, 0.0, 0.0
+    profit = lay_wins - (lay_losses * (lay_odds - 1.0))
     profit = round(profit, 1)
     roi_pct = round((profit / total) * 100, 2)
-    return label, total, back_odds, lay_wins, lay_losses, profit, roi_pct
+    return label, total, lay_odds, lay_wins, lay_losses, profit, roi_pct
 
 
 def calc_live_roi_simulation(

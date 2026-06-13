@@ -65,8 +65,8 @@ C_CARD   = "#111827"   # same — use pm-card style
 C_CARD_B = "#1e293b"   # inner cells (prematch uses #1e293b for inner boxes)
 C_BORDER = "#1f2937"   # pm border color
 C_TEXT   = "#f1f5f9"   # prematch main text
-C_MUTED  = "#94a3b8"   # prematch label color
-C_MUTED2 = "#64748b"   # prematch sub color
+C_MUTED  = "#cbd5e1"   # prematch label color
+C_MUTED2 = "#94a3b8"   # prematch sub color
 C_GREEN2 = "#22c55e"   # prematch green (was #10b981, prematch uses #22c55e)
 C_BLUE2  = "#3b82f6"   # prematch blue
 C_RED    = "#ef4444"   # same
@@ -361,8 +361,12 @@ def _render_live_interval_table(title, table, accent, market_odds, recommended_o
 def _render_live_projection_block(
     matches_df, filters, goal_events, score_index,
     current_minute, home_score, away_score,
+    first_goal_minute=None,
 ):
     """Proiezione live: prob gol, best interval, tabelle 5/10/15 min."""
+    interval_minute = (
+        int(first_goal_minute) if first_goal_minute is not None else int(current_minute)
+    )
     criteria = _build_goal_criteria(filters)
     if criteria:
         ep_df, _ = filter_matches_by_goal_criteria(matches_df, criteria, tolerance=2)
@@ -387,10 +391,10 @@ def _render_live_projection_block(
         st.warning("Nessuna partita simile per la proiezione live.")
         return
 
-    live_goal = calc_live_goal_probability(ep_df, current_minute, edge=0.05, min_goals_after=1)
-    table_5 = build_future_intervals(ep_df, current_minute, 5)
-    table_10 = build_future_intervals(ep_df, current_minute, 10)
-    table_15 = build_future_intervals(ep_df, current_minute, 15)
+    live_goal = calc_live_goal_probability(ep_df, interval_minute, edge=0.05, min_goals_after=1)
+    table_5 = build_future_intervals(ep_df, interval_minute, 5)
+    table_10 = build_future_intervals(ep_df, interval_minute, 10)
+    table_15 = build_future_intervals(ep_df, interval_minute, 15)
 
     best_5 = get_best_interval(table_5)
     best_10 = get_best_interval(table_10)
@@ -398,9 +402,9 @@ def _render_live_projection_block(
     best_interval, best_stats = best_10
     best_prob = best_stats["pct"]
 
-    cum_5 = prob_goal_within_minutes(ep_df, current_minute, 5)
-    cum_10 = prob_goal_within_minutes(ep_df, current_minute, 10)
-    cum_15 = prob_goal_within_minutes(ep_df, current_minute, 15)
+    cum_5 = prob_goal_within_minutes(ep_df, interval_minute, 5)
+    cum_10 = prob_goal_within_minutes(ep_df, interval_minute, 10)
+    cum_15 = prob_goal_within_minutes(ep_df, interval_minute, 15)
 
     signal_txt, signal_col = live_entry_signal(best_prob)
     prob_1g = live_goal["prob"] if live_goal else 0.0
@@ -435,12 +439,21 @@ def _render_live_projection_block(
             f"book {market_odds:.2f} > value {recommended_odds:.2f}"
         )
 
+    interval_note = ""
+    if first_goal_minute is not None and int(first_goal_minute) != int(current_minute):
+        interval_note = (
+            f'<div style="font-size:11px;color:{C_MUTED2};margin-top:4px;">'
+            f'Fasce fisse dal gol al <b style="color:{C_TEXT};">{interval_minute}\'</b> '
+            f'(minuto live: {current_minute}\')</div>'
+        )
+
     st.html(
         f'<div style="padding:16px;background:#0f172a;border:1px solid #1e293b;'
         f'border-radius:10px;margin-bottom:10px;">'
         f'<div style="font-weight:700;color:#fbbf24;">'
-        f'⚽ PROIEZIONE LIVE DAL {current_minute}\'</div>'
+        f'⚽ PROIEZIONE LIVE DAL {interval_minute}\'</div>'
         f'{filter_note}'
+        f'{interval_note}'
         f'<div style="display:flex;justify-content:space-between;flex-wrap:wrap;'
         f'gap:12px;margin-top:12px;">'
         f'<div>'
@@ -498,7 +511,7 @@ def _section_header(num, title, color=C_ORANGE):
 
 
 def _sub(text):
-    return f'<div style="font-size:12px;color:#64748b;margin-bottom:6px;">{text}</div>'
+    return f'<div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">{text}</div>'
 
 
 # ── Dynamic timeframe helpers ──────────────────────────────────────────────────
@@ -566,8 +579,8 @@ def _team_goals_timeline_html(filters, team_side):
             else f"{i + 1}°"
         )
         rows.append(
-            f'<div style="font-size:10px;line-height:1.4;color:#94a3b8;">'
-            f'<span style="color:#64748b;text-transform:lowercase;">{label} gol</span>'
+            f'<div style="font-size:10px;line-height:1.4;color:#cbd5e1;">'
+            f'<span style="color:#94a3b8;text-transform:lowercase;">{label} gol</span>'
             f' — <span style="color:#22c55e;font-weight:700;">{minute}\'</span>'
             f'</div>'
         )
@@ -692,7 +705,7 @@ def _render_live_signal_card(data: dict, scorer_label: str) -> None:
         f'<div style="font-size:12px;color:#86efac;">⚡ LIVE SIGNAL · {scorer_label}</div>'
         f'<div style="font-size:26px;font-weight:900;color:{sig_color};margin-top:5px;">'
         f'{signal}</div>'
-        f'<div style="margin-top:10px;font-size:12px;color:#94a3b8;line-height:1.6;">'
+        f'<div style="margin-top:10px;font-size:12px;color:#cbd5e1;line-height:1.6;">'
         f'⏱ Miglior timing: <b>{data["best_interval"]}</b> ({data["best_prob"]}%)<br>'
         f'📈 Probabilità globale (≥1 gol dopo): <b>{data["global_prob_pct"]}%</b><br>'
         f'📊 Campione: <b>{data["confidence"]}</b> partite<br>'
@@ -717,10 +730,11 @@ def _render_post_goal_analysis_block(
     tol = analysis["tolerance"]
     tables = analysis["tables"]
     n_total = tables["total"]["count"]
+    goal_minute = analysis["reference_minute"]
 
     if n_total == 0:
         st.warning(
-            f"Nessuna partita storica con primo gol intorno al {input_minute}' "
+            f"Nessuna partita storica con primo gol intorno al {goal_minute}' "
             f"(±{tol} min)."
         )
         return
@@ -733,10 +747,10 @@ def _render_post_goal_analysis_block(
 
     st.markdown(
         f'<div style="font-size:16px;font-weight:800;color:{C_ORANGE};margin:12px 0 4px 0;">'
-        f'⚡ POST GOAL ANALYSIS (minuto {input_minute}\')</div>'
+        f'⚡ POST GOAL ANALYSIS (gol al {goal_minute}\')</div>'
         f'<div style="font-size:12px;color:{C_MUTED};margin-bottom:10px;">'
-        f'Filtro: primo gol tra <b>{input_minute - tol}–{input_minute + tol}\'</b> '
-        f'· Gol live al <b>{reference_minute}\'</b> · Dataset: <b>{n_total}</b> partite'
+        f'Filtro: primo gol tra <b>{goal_minute - tol}–{goal_minute + tol}\'</b> '
+        f'· Minuto live: <b>{input_minute}\'</b> · Dataset: <b>{n_total}</b> partite'
         f' · Primo gol: <b>{scorer_lbl}</b></div>',
         unsafe_allow_html=True,
     )
@@ -744,7 +758,7 @@ def _render_post_goal_analysis_block(
     trigger_data = generate_live_trigger(
         trigger_table,
         filtered_matches=trigger_matches,
-        input_minute=input_minute,
+        input_minute=goal_minute,
     )
     _render_live_signal_card(trigger_data, scorer_lbl)
 
@@ -825,12 +839,12 @@ def render():
             height: 100%;
         }
         .pm-label {
-            font-size: 10px;
-            color: #94a3b8;
+            font-size: 11px;
+            color: #e2e8f0;
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 6px;
-            font-weight: 600;
+            font-weight: 700;
         }
         .pm-val {
             font-size: 26px;
@@ -838,8 +852,8 @@ def render():
             line-height: 1;
         }
         .pm-sub {
-            font-size: 11px;
-            color: #64748b;
+            font-size: 12px;
+            color: #cbd5e1;
             margin-top: 4px;
         }
         .pm-box {
@@ -1032,7 +1046,7 @@ def render():
                                 letter-spacing:0.5px;text-shadow:{event_glow};">
                         {event_text}
                     </div>
-                    <div style="font-size:10px;font-weight:600;color:#64748b;margin-top:3px;
+                    <div style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:3px;
                                 letter-spacing:0.08em;">
                         {current_half.upper()}
                     </div>
@@ -1266,15 +1280,7 @@ def render():
         # ═══════════════════════════════════════════════════════════════
         # SEZIONE 2c — ESITO FINALE DOPO IL PRIMO GOL
         # ═══════════════════════════════════════════════════════════════
-        _fgo_min = first_goal_min
-        if _fgo_min is None and filters.get("valid_goals"):
-            _fgo_min = filters["valid_goals"][0][0]
-        render_first_goal_outcome_block(
-            filtered,
-            goal_events,
-            live_minute=int(_fgo_min) if _fgo_min is not None else None,
-            live_team=filters.get("first_goal_team"),
-        )
+        render_first_goal_outcome_block(filtered, goal_events)
 
         # ═══════════════════════════════════════════════════════════════
         # SEZIONE 3 — PROIEZIONE LIVE (intervalli dinamici 5/10/15 min)
@@ -1282,6 +1288,7 @@ def render():
         _render_live_projection_block(
             filtered, filters, goal_events, score_index,
             int(current_minute), home_score, away_score,
+            first_goal_minute=first_goal_min,
         )
 
         # ═══════════════════════════════════════════════════════════════
@@ -1304,7 +1311,7 @@ def render():
                 st.markdown(
                     f'<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;'
                     f'padding:0;height:175px;display:flex;align-items:center;justify-content:center;">'
-                    f'<div style="font-size:12px;color:#64748b;text-align:center;">'
+                    f'<div style="font-size:12px;color:#94a3b8;text-align:center;">'
                     f'<div style="font-size:14px;font-weight:700;color:#3b82f6;margin-bottom:6px;">DISTRIBUZIONE GOL 1° TEMPO</div>'
                     f'1° Tempo completato</div></div>',
                     unsafe_allow_html=True,
@@ -1352,7 +1359,7 @@ def render():
                 st.markdown(
                     f'<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;'
                     f'padding:0;height:175px;display:flex;align-items:center;justify-content:center;">'
-                    f'<div style="font-size:12px;color:#64748b;text-align:center;">'
+                    f'<div style="font-size:12px;color:#94a3b8;text-align:center;">'
                     f'<div style="font-size:14px;font-weight:700;color:#22c55e;margin-bottom:6px;">DISTRIBUZIONE GOL 2° TEMPO</div>'
                     f'Nessun timeframe futuro</div></div>',
                     unsafe_allow_html=True,

@@ -91,7 +91,7 @@ def render_first_goal_chart(data, title, color, border_color="#1f2937",
                     padding:10px; background:#111827; border-radius:8px; font-size:13px; color:#e2e8f0;">
             <div style="text-align:center;">⏱️ <b style="color:{color}; font-size:18px;">{data['median']}'</b></div>
             <div style="text-align:center;">⚡ <b style="color:{color};">{data['early30']}%</b><br>
-                <span style="font-size:9px; color:#64748b;">entro {window_label}'</span>
+                <span style="font-size:11px; color:#cbd5e1;">entro {window_label}'</span>
             </div>
             <div style="text-align:center;">🏠 <b style="color:{color};">{data['first_team']}</b></div>
         </div>
@@ -102,7 +102,7 @@ def render_first_goal_chart(data, title, color, border_color="#1f2937",
                             width:10px; height:10px; background:{color}; border-radius:50%;
                             box-shadow:0 0 10px {color};"></div>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:9px; color:#64748b; margin-top:4px;">
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:#cbd5e1; margin-top:4px;">
                 <span>0</span><span style="color:{color}; font-weight:700;">{median}'</span><span>{max_min}</span>
             </div>
         </div>
@@ -114,10 +114,15 @@ def render_first_goal_chart(data, title, color, border_color="#1f2937",
             ⚡ {data['signal']}
         </div>
 
-        <div style="margin-top:10px; padding-top:8px; border-top:1px solid #1f2937;
-                    display:flex; justify-content:space-between; font-size:11px; color:#64748b;">
-            <span>Con gol: <b style="color:{color};">{total_fg}</b> ({pct_with}%)</span>
-            <span>Senza: <b>{none_count}</b> ({pct_without}%)</span>
+        <div style="margin-top:12px; padding:10px 12px; background:#111827; border-radius:8px;
+                    border:1px solid #334155; display:flex; justify-content:space-between;
+                    gap:12px; font-size:12px; color:#e2e8f0;">
+            <span>Con gol:
+                <b style="color:{color}; font-size:14px;">{total_fg}</b>
+                <span style="color:#cbd5e1;"> ({pct_with}%)</span></span>
+            <span>Senza:
+                <b style="color:#f8fafc; font-size:14px;">{none_count}</b>
+                <span style="color:#cbd5e1;"> ({pct_without}%)</span></span>
         </div>
     </div>
     """)

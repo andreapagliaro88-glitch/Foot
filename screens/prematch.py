@@ -19,7 +19,8 @@ from calculations import (
     calculate_over_trend_by_season, calculate_interval_distribution_1h,
     calculate_interval_distribution_2h, calculate_at_least_one_goal_half_pct,
     calculate_timing_distribution_total,
-    INTERVALS_1T, INTERVALS_2T, get_team_stats_all_competitions
+    INTERVALS_1T, INTERVALS_2T, get_team_stats_all_competitions,
+    lay_best_odds,
 )
 from utils import format_pct, format_roi, format_num, get_pct_color
 from screens.goal_comparison import render_goal_comparison
@@ -43,7 +44,7 @@ def _section_header(
 ):
     margin_top = "4px" if first else "32px"
     sub_html = (
-        f'<div style="font-size:12px; color:#64748b; margin-top:3px; line-height:1.4;">{subtitle}</div>'
+        f'<div style="font-size:12px; color:#94a3b8; margin-top:3px; line-height:1.4;">{subtitle}</div>'
         if subtitle else ""
     )
     st.html(f"""
@@ -99,7 +100,7 @@ def render():
         }
         .pm-label {
             font-size:11px; 
-            color:#94a3b8; 
+            color:#cbd5e1; 
             text-transform:uppercase; 
             letter-spacing:1px; 
             margin-bottom:8px;
@@ -109,8 +110,8 @@ def render():
             font-weight:700;
         }
         .pm-sub {
-            font-size:11px; 
-            color:#64748b; 
+            font-size:12px; 
+            color:#cbd5e1; 
             margin-top:4px;
         }
         .pm-box {
@@ -130,7 +131,7 @@ def render():
             text-align: center;
         }
         .pm-score-table th {
-            color: #94a3b8;
+            color: #cbd5e1;
             font-size: 12px;
             font-weight: 600;
         }
@@ -258,9 +259,9 @@ def render():
         border = f"border-top: 2px solid {color};" if highlight else ""
         return f"""
         <div style="background:#1e293b; border-radius:6px; padding:8px 4px; text-align:center; {border}">
-            <div style="font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:3px;">{label}</div>
+            <div style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:3px;">{label}</div>
             <div style="font-size:18px; font-weight:800; color:{color}; line-height:1;">{pct:.1f}%</div>
-            <div style="font-size:10px; color:#64748b; margin-top:2px;">{count}/{n}</div>
+            <div style="font-size:12px; color:#e2e8f0; margin-top:3px;"><b style="color:#f8fafc;">{count}</b>/{n}</div>
         </div>
         """
 
@@ -290,20 +291,20 @@ def render():
 
     st.html(f"""
     <div class="pm-box" style="padding:14px 16px; margin-bottom:16px;">
-        <div style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase;
-                    letter-spacing:1px; margin-bottom:10px;">RIEPILOGO OVER / UNDER — TEMPO PIENO</div>
+        <div style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase;
+                    letter-spacing:0.6px; margin-bottom:10px;">RIEPILOGO OVER / UNDER — TEMPO PIENO</div>
         <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:10px;">
             {o_cells_ft}
         </div>
         <div style="border-top:1px solid #1f2937; margin:8px 0;"></div>
         <div style="display:grid; grid-template-columns:auto 1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
-            <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase;
-                        letter-spacing:0.8px; display:flex; align-items:center; white-space:nowrap; padding-right:4px;">1° TEMPO</div>
+            <div style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase;
+                        letter-spacing:0.6px; display:flex; align-items:center; white-space:nowrap; padding-right:4px;">1° TEMPO</div>
             {o_cells_1h}
         </div>
         <div style="display:grid; grid-template-columns:auto 1fr 1fr 1fr; gap:8px;">
-            <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase;
-                        letter-spacing:0.8px; display:flex; align-items:center; white-space:nowrap; padding-right:4px;">2° TEMPO</div>
+            <div style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase;
+                        letter-spacing:0.6px; display:flex; align-items:center; white-space:nowrap; padding-right:4px;">2° TEMPO</div>
             {o_cells_2h}
         </div>
     </div>
@@ -431,7 +432,7 @@ def render():
 
                 <div style="background:#111827; border:1px solid #1f2937; border-radius:8px;
                             padding:12px; text-align:center;">
-                    <div style="color:#94a3b8; font-size:10px; font-weight:600;
+                    <div style="color:#cbd5e1; font-size:10px; font-weight:600;
                                 text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px;">
                         TOTALE PARTITE
                     </div>
@@ -442,7 +443,7 @@ def render():
 
                 <div style="background:#111827; border:1px solid #1f2937; border-radius:8px;
                             padding:12px; text-align:center;">
-                    <div style="color:#94a3b8; font-size:10px; font-weight:600;
+                    <div style="color:#cbd5e1; font-size:10px; font-weight:600;
                                 text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px;">
                         &#9917; MEDIA GOL
                     </div>
@@ -453,7 +454,7 @@ def render():
 
                 <div style="background:#111827; border:1px solid #1f2937; border-radius:8px;
                             padding:12px; text-align:center;">
-                    <div style="color:#94a3b8; font-size:10px; font-weight:600;
+                    <div style="color:#cbd5e1; font-size:10px; font-weight:600;
                                 text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px;">
                         &#128200; GOAL AVERAGE
                     </div>
@@ -501,7 +502,7 @@ def render():
             <div>
                 💰 Edge:
                 <b style="color:{edge_color}; text-shadow:0 0 10px {edge_color};">{edge_o25:+.1f}%</b>
-                <span style="color:#64748b; font-size:11px;"> (vs quota {_avg_o25:.2f})</span>
+                <span style="color:#94a3b8; font-size:11px;"> (vs quota {_avg_o25:.2f})</span>
             </div>
         </div>
         """)
@@ -667,15 +668,15 @@ def render():
             <div style="font-size:12px; font-weight:700; color:{dom_color};">
                 ⚡ {dom_text}
             </div>
-            <div style="font-size:11px; color:#94a3b8;">
+            <div style="font-size:12px; color:#cbd5e1;">
                 🔥 Più probabile: <span style="color:#f59e0b; font-weight:700; text-shadow:0 0 8px #f59e0b60;">{global_best} ({global_best_pct}%)</span>
             </div>
-            <div style="font-size:11px; color:#94a3b8;">
+            <div style="font-size:12px; color:#cbd5e1;">
                 TOP 5 coprono <span style="color:#3b82f6; font-weight:700;">{global_top5_conf}%</span> dei casi
             </div>
-            <div style="font-size:11px; color:#94a3b8;">
+            <div style="font-size:12px; color:#cbd5e1;">
                 📊 {low_goals_pct}% risultati 0-2 gol · {high_goals_pct}% 3+ gol
-                <span style="color:#64748b;">(Over 2.5: {over25_pct:.1f}%)</span>
+                <span style="color:#cbd5e1;">(Over 2.5: {over25_pct:.1f}%)</span>
             </div>
         </div>
         """)
@@ -699,8 +700,8 @@ def render():
                 <div style="display:flex; justify-content:space-between; align-items:center;
                             padding:5px 0; border-bottom:1px solid #1f2937;">
                     <span style="{score_style} font-size:12px;">{badge}{score}</span>
-                    <span style="font-size:11px; font-weight:600; white-space:nowrap;">
-                        <span style="color:#64748b;">{count}</span>
+                    <span style="font-size:12px; font-weight:600; white-space:nowrap;">
+                        <span style="color:#e2e8f0;">{count}</span>
                         <span style="color:#475569; margin:0 4px;">·</span>
                         <span style="color:{pct_color};">{pct}%</span>
                     </span>
@@ -718,25 +719,25 @@ def render():
                 </div>
                 <div style="display:flex; gap:12px;">
                     <div style="flex:1; border-right:1px solid #1f2937; padding-right:10px;">
-                        <div style="font-size:9px; color:#64748b; text-transform:uppercase;
-                                    letter-spacing:0.8px; margin-bottom:3px;">ESITI PRINCIPALI</div>
+                        <div style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase;
+                                    letter-spacing:0.6px; margin-bottom:4px;">ESITI PRINCIPALI</div>
                         <div style="color:{header_color}; font-size:26px; font-weight:800; line-height:1;">
                             {esiti_pct:.1f}%
                         </div>
-                        <div style="color:#64748b; font-size:10px; margin-top:4px;">
-                            {esiti_count} {esiti_label}
+                        <div style="color:#e2e8f0; font-size:12px; margin-top:4px;">
+                            <b style="color:#f8fafc;">{esiti_count}</b> {esiti_label}
                         </div>
-                        <div style="margin-top:10px; font-size:10px; color:#64748b; line-height:1.6;">
-                            <div>TOP 3 cumulativo: <span style="color:#cbd5e1; font-weight:600;">{top3_cum}%</span></div>
-                            <div>TOP 5 cumulativo: <span style="color:#cbd5e1; font-weight:600;">{top5_cum}%</span></div>
+                        <div style="margin-top:10px; font-size:12px; color:#cbd5e1; line-height:1.7;">
+                            <div>TOP 3 cumulativo: <span style="color:#f8fafc; font-weight:700;">{top3_cum}%</span></div>
+                            <div>TOP 5 cumulativo: <span style="color:#f8fafc; font-weight:700;">{top5_cum}%</span></div>
                         </div>
-                        <div style="margin-top:8px; font-size:10px; color:#64748b; line-height:1.5;">
-                            <div>🎯 Stretti (±1): <span style="color:#94a3b8;">{tight_pct}%</span></div>
-                            <div>💣 Larghi (3+): <span style="color:#94a3b8;">{wide_pct}%</span></div>
+                        <div style="margin-top:8px; font-size:12px; color:#cbd5e1; line-height:1.6;">
+                            <div>🎯 Stretti (±1): <span style="color:#f8fafc; font-weight:600;">{tight_pct}%</span></div>
+                            <div>💣 Larghi (3+): <span style="color:#f8fafc; font-weight:600;">{wide_pct}%</span></div>
                         </div>
                         <div style="margin-top:10px;">
-                            <div style="font-size:9px; color:#64748b; margin-bottom:4px;">
-                                Confidenza TOP 5: {top5_cum}%
+                            <div style="font-size:11px; color:#cbd5e1; font-weight:600; margin-bottom:4px;">
+                                Confidenza TOP 5: <span style="color:#f8fafc;">{top5_cum}%</span>
                             </div>
                             <div style="background:#1f2937; height:6px; border-radius:4px; overflow:hidden;">
                                 <div style="width:{conf_width}%; background:{header_color}; height:100%;
@@ -745,8 +746,8 @@ def render():
                         </div>
                     </div>
                     <div style="flex:1; padding-left:2px;">
-                        <div style="font-size:10px; color:#64748b; text-transform:uppercase;
-                                    letter-spacing:0.8px; margin-bottom:6px;">TOP 5 RISULTATI</div>
+                        <div style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase;
+                                    letter-spacing:0.6px; margin-bottom:6px;">TOP 5 RISULTATI</div>
                         {top5_rows}
                     </div>
                 </div>
@@ -780,8 +781,8 @@ def render():
                 <div style="display:flex; justify-content:space-between; align-items:center;
                             padding:5px 0; border-bottom:1px solid #1f2937;">
                     <span style="{score_style} font-size:12px;">{badge}{score}</span>
-                    <span style="font-size:11px; font-weight:600; white-space:nowrap;">
-                        <span style="color:#64748b;">{count}</span>
+                    <span style="font-size:12px; font-weight:600; white-space:nowrap;">
+                        <span style="color:#e2e8f0;">{count}</span>
                         <span style="color:#475569; margin:0 4px;">·</span>
                         <span style="color:{pct_color};">{pct}%</span>
                     </span>
@@ -799,25 +800,25 @@ def render():
                 </div>
                 <div style="display:flex; gap:12px;">
                     <div style="flex:1; border-right:1px solid #1f2937; padding-right:10px;">
-                        <div style="font-size:9px; color:#64748b; text-transform:uppercase;
-                                    letter-spacing:0.8px; margin-bottom:3px;">ESITI PRINCIPALI</div>
+                        <div style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase;
+                                    letter-spacing:0.6px; margin-bottom:4px;">ESITI PRINCIPALI</div>
                         <div style="color:{header_color}; font-size:26px; font-weight:800; line-height:1;">
                             {top5_cum:.1f}%
                         </div>
-                        <div style="color:#64748b; font-size:10px; margin-top:4px;">
-                            {top5_count} partite (top 5)
+                        <div style="color:#e2e8f0; font-size:12px; margin-top:4px;">
+                            <b style="color:#f8fafc;">{top5_count}</b> partite (top 5)
                         </div>
-                        <div style="margin-top:10px; font-size:10px; color:#64748b; line-height:1.6;">
-                            <div>TOP 3 cumulativo: <span style="color:#cbd5e1; font-weight:600;">{top3_cum}%</span></div>
-                            <div>Più probabile: <span style="color:#f59e0b; font-weight:600;">{scores[0][0]} ({scores[0][2]}%)</span></div>
+                        <div style="margin-top:10px; font-size:12px; color:#cbd5e1; line-height:1.7;">
+                            <div>TOP 3 cumulativo: <span style="color:#f8fafc; font-weight:700;">{top3_cum}%</span></div>
+                            <div>Più probabile: <span style="color:#f59e0b; font-weight:700;">{scores[0][0]} ({scores[0][2]}%)</span></div>
                         </div>
-                        <div style="margin-top:8px; font-size:10px; color:#64748b; line-height:1.5;">
-                            <div>🎯 Stretti (±1): <span style="color:#94a3b8;">{tight_g}%</span></div>
-                            <div>💣 Larghi (3+): <span style="color:#94a3b8;">{wide_g}%</span></div>
+                        <div style="margin-top:8px; font-size:12px; color:#cbd5e1; line-height:1.6;">
+                            <div>🎯 Stretti (±1): <span style="color:#f8fafc; font-weight:600;">{tight_g}%</span></div>
+                            <div>💣 Larghi (3+): <span style="color:#f8fafc; font-weight:600;">{wide_g}%</span></div>
                         </div>
                         <div style="margin-top:10px;">
-                            <div style="font-size:9px; color:#64748b; margin-bottom:4px;">
-                                Confidenza TOP 5: {top5_cum}%
+                            <div style="font-size:11px; color:#cbd5e1; font-weight:600; margin-bottom:4px;">
+                                Confidenza TOP 5: <span style="color:#f8fafc;">{top5_cum}%</span>
                             </div>
                             <div style="background:#1f2937; height:6px; border-radius:4px; overflow:hidden;">
                                 <div style="width:{conf_width}%; background:{header_color}; height:100%;
@@ -826,8 +827,8 @@ def render():
                         </div>
                     </div>
                     <div style="flex:1; padding-left:2px;">
-                        <div style="font-size:10px; color:#64748b; text-transform:uppercase;
-                                    letter-spacing:0.8px; margin-bottom:6px;">TOP 5 RISULTATI</div>
+                        <div style="font-size:11px; color:#cbd5e1; font-weight:700; text-transform:uppercase;
+                                    letter-spacing:0.6px; margin-bottom:6px;">TOP 5 RISULTATI</div>
                         {top5_rows}
                     </div>
                 </div>
@@ -892,9 +893,9 @@ def render():
             
                 html += f"""
                 <div style="background:#1e293b; border-radius:6px; padding:12px; text-align:center;">
-                    <div style="font-size:10px; color:#94a3b8; font-weight:600;">{label}</div>
+                    <div style="font-size:10px; color:#cbd5e1; font-weight:600;">{label}</div>
                     <p style="color:{color}; font-size:1.4rem; font-weight:bold; margin:0;">{pct:.1f}%</p>
-                    <div style="font-size:11px; color:#64748b; margin-top:4px;">{calculated_count}/{n}</div>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">{calculated_count}/{n}</div>
                 </div>
                 """
             html += '</div></div>'
@@ -992,14 +993,14 @@ def render():
                     <div style="font-size:9px; color:#22c55e; font-weight:700;
                                 text-transform:uppercase; letter-spacing:1px;">🔥 Periodo più Produttivo</div>
                     <div style="font-size:16px; font-weight:800; color:#f1f5f9;">{best_tf}</div>
-                    <div style="font-size:11px; color:#94a3b8;">{best_val:.1f}%</div>
+                    <div style="font-size:11px; color:#cbd5e1;">{best_val:.1f}%</div>
                 </div>
                 <div style="background:#1e293b; border-left:3px solid #06b6d4; border-radius:4px;
                             padding:6px 12px; flex:1; text-align:center;">
                     <div style="font-size:9px; color:#06b6d4; font-weight:700;
                                 text-transform:uppercase; letter-spacing:1px;">❄️ Periodo meno Produttivo</div>
                     <div style="font-size:16px; font-weight:800; color:#f1f5f9;">{worst_tf}</div>
-                    <div style="font-size:11px; color:#94a3b8;">{worst_val:.1f}%</div>
+                    <div style="font-size:11px; color:#cbd5e1;">{worst_val:.1f}%</div>
                 </div>
             </div>
             """)
@@ -1042,7 +1043,7 @@ def render():
 
         def _plain_cell(val):
             return (
-                f"color:#94a3b8; border:none; text-align:center; "
+                f"color:#cbd5e1; border:none; text-align:center; "
                 f"padding:10px 6px; font-weight:500;"
             )
 
@@ -1086,18 +1087,18 @@ def render():
             <div class="pm-box" style="padding:0; overflow:hidden; border:1px solid #1e293b; border-radius:10px;">
                 <table class="pm-score-table" style="width:100%; border-collapse:collapse; border:none;">
                     <tr style="background:#111827;">
-                        <th style="border:none; padding:10px 8px; color:#64748b; font-size:10px; text-align:left;">Intervallo</th>
-                        <th style="border:none; padding:8px 4px; color:#64748b; font-size:10px; text-align:center;">
+                        <th style="border:none; padding:10px 8px; color:#94a3b8; font-size:10px; text-align:left;">Intervallo</th>
+                        <th style="border:none; padding:8px 4px; color:#94a3b8; font-size:10px; text-align:center;">
                             1 Gol %<br><span style="font-weight:400; font-size:9px;">(delle partite)</span>
                         </th>
-                        <th style="border:none; padding:8px 4px; color:#64748b; font-size:10px; text-align:center;">
+                        <th style="border:none; padding:8px 4px; color:#94a3b8; font-size:10px; text-align:center;">
                             2 Gol %<br><span style="font-weight:400; font-size:9px;">(delle partite)</span>
                         </th>
-                        <th style="border:none; padding:8px 4px; color:#64748b; font-size:10px; text-align:center;">
+                        <th style="border:none; padding:8px 4px; color:#94a3b8; font-size:10px; text-align:center;">
                             3+ Gol %<br><span style="font-weight:400; font-size:9px;">(delle partite)</span>
                         </th>
                         <th style="border:none; padding:8px 4px; color:{accent}; font-size:10px; text-align:center;">
-                            ≥ 1 Gol %<br><span style="font-weight:400; font-size:9px; color:#64748b;">(almeno un gol)</span>
+                            ≥ 1 Gol %<br><span style="font-weight:400; font-size:9px; color:#94a3b8;">(almeno un gol)</span>
                         </th>
                     </tr>
                     {rows}
@@ -1125,7 +1126,7 @@ def render():
                 "DISTRIBUZIONE GOL PER INTERVALLI — PRIMO TEMPO (1T)"
             ))
             st.html(f"""
-            <div style="font-size:11px; color:#64748b; margin-top:8px; padding-left:2px;">
+            <div style="font-size:11px; color:#94a3b8; margin-top:8px; padding-left:2px;">
                 ⓘ Il <span style="color:#3b82f6; font-weight:600;">{ge1_totale_1t:.1f}%</span>
                 delle partite ha almeno un gol nel 1° tempo
             </div>
@@ -1137,7 +1138,7 @@ def render():
                 "DISTRIBUZIONE GOL PER INTERVALLI — SECONDO TEMPO (2T)"
             ))
             st.html(f"""
-            <div style="font-size:11px; color:#64748b; margin-top:8px; padding-left:2px;">
+            <div style="font-size:11px; color:#94a3b8; margin-top:8px; padding-left:2px;">
                 ⓘ Il <span style="color:#f97316; font-weight:600;">{ge1_totale_2t:.1f}%</span>
                 delle partite ha almeno un gol nel 2° tempo
             </div>
@@ -1146,10 +1147,10 @@ def render():
         st.markdown("<br>", unsafe_allow_html=True)
         st.html(f"""
         <div class="pm-box" style="padding:14px 20px; border:1px solid #1e293b; border-radius:10px;">
-            <div style="font-size:11px; font-weight:700; color:#94a3b8; letter-spacing:0.5px; margin-bottom:6px;">
+            <div style="font-size:11px; font-weight:700; color:#cbd5e1; letter-spacing:0.5px; margin-bottom:6px;">
                 INSIGHT RAPIDO
             </div>
-            <div style="font-size:12px; color:#94a3b8;">
+            <div style="font-size:12px; color:#cbd5e1;">
                 1T forte tra
                 <span style="color:#3b82f6; font-weight:700;">{best_1h_label} ({best_1h_pct:.1f}%)</span>
                 almeno un gol
@@ -1259,7 +1260,7 @@ def render():
                     <div>{zero_label}: {zero_zero_pct:.1f}%</div>
                     <div>{balance_goals_label} · Media gol: <b>{avg_goals:.2f}</b></div>
                     <div>💰 Edge Over 2.5: <b style="color:{edge_color};">{edge_over25:+.1f}%</b>
-                        <span style="color:#64748b; font-size:11px;"> (quota media {avg_odds_o25:.2f})</span>
+                        <span style="color:#94a3b8; font-size:11px;"> (quota media {avg_odds_o25:.2f})</span>
                     </div>
                     {suggestion_html}
                 </div>
@@ -1273,7 +1274,7 @@ def render():
 
         # ── Row 2: ROI Simulation full width ──────────────────────────────────────
         st.markdown(
-            '<div style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; '
+            '<div style="font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; '
             'letter-spacing:0.6px; margin:12px 0 8px 0;">Simulazione ROI — Market reali (quote presenti)</div>',
             unsafe_allow_html=True,
         )
@@ -1319,17 +1320,16 @@ def render():
             return label, total, avg_odds, wins, losses, profit, roi_pct
 
         def calc_lay_row(label, back_wins, back_losses, back_odds):
-            # Lay: wins when back loses, loses when back wins
+            lay_odds = lay_best_odds(back_odds) or back_odds
             lay_wins   = back_losses
             lay_losses = back_wins
             total = lay_wins + lay_losses
             if total == 0:
-                return label, total, back_odds, lay_wins, lay_losses, 0.0, 0.0
-            # Lay profit: win +1 unit per win, lose (odds-1) per loss
-            profit = lay_wins - (lay_losses * (back_odds - 1.0))
+                return label, total, lay_odds, lay_wins, lay_losses, 0.0, 0.0
+            profit = lay_wins - (lay_losses * (lay_odds - 1.0))
             profit = round(profit, 1)
             roi_pct = round((profit / total) * 100, 2)
-            return label, total, back_odds, lay_wins, lay_losses, profit, roi_pct
+            return label, total, lay_odds, lay_wins, lay_losses, profit, roi_pct
 
         # ── Match outcome counts from filtered data ───────────────────────────
         hg = pd.to_numeric(filtered["home_goals_ft"], errors="coerce").fillna(0)
@@ -1513,7 +1513,7 @@ def render():
         
             if h_stats and a_stats:
                 st.markdown(
-                    '<div style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; '
+                    '<div style="font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; '
                     'letter-spacing:0.6px; margin:8px 0 10px 0;">Ultime 20 partite</div>',
                     unsafe_allow_html=True,
                 )
@@ -1527,48 +1527,48 @@ def render():
                         </div>
                         <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; text-align:center; margin-bottom:12px;">
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">WIN</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">WIN</div>
                                 <div style="font-size:14px; font-weight:bold; color:#22c55e;">{h_stats['wins']}</div>
-                                <div style="font-size:8px; color:#64748b;">{h_stats['wins']/h_stats['n_matches']*100:.0f}%</div>
+                                <div style="font-size:8px; color:#94a3b8;">{h_stats['wins']/h_stats['n_matches']*100:.0f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">DRW</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">DRW</div>
                                 <div style="font-size:14px; font-weight:bold; color:#f59e0b;">{h_stats['draws']}</div>
-                                <div style="font-size:8px; color:#64748b;">{h_stats['draws']/h_stats['n_matches']*100:.0f}%</div>
+                                <div style="font-size:8px; color:#94a3b8;">{h_stats['draws']/h_stats['n_matches']*100:.0f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">LOS</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">LOS</div>
                                 <div style="font-size:14px; font-weight:bold; color:#ef4444;">{h_stats['losses']}</div>
-                                <div style="font-size:8px; color:#64748b;">{h_stats['losses']/h_stats['n_matches']*100:.0f}%</div>
+                                <div style="font-size:8px; color:#94a3b8;">{h_stats['losses']/h_stats['n_matches']*100:.0f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">GF</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">GF</div>
                                 <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{int(h_stats['goals_scored'])}</div>
-                                <div style="font-size:8px; color:#64748b;">{h_stats['avg_scored']:.1f}/g</div>
+                                <div style="font-size:8px; color:#94a3b8;">{h_stats['avg_scored']:.1f}/g</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">GS</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">GS</div>
                                 <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{int(h_stats['goals_conceded'])}</div>
-                                <div style="font-size:8px; color:#64748b;">{h_stats['avg_conceded']:.1f}/g</div>
+                                <div style="font-size:8px; color:#94a3b8;">{h_stats['avg_conceded']:.1f}/g</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">PTS</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">PTS</div>
                                 <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{h_stats['points']}</div>
-                                <div style="font-size:8px; color:#64748b;">{h_stats['points_avg']:.1f}/g</div>
+                                <div style="font-size:8px; color:#94a3b8;">{h_stats['points_avg']:.1f}/g</div>
                             </div>
                         </div>
                     
                         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; text-align:center; margin-bottom:12px;">
                             <div style="background:#1e293b; border-radius:6px; padding:8px 4px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600;">OVER 2.5</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600;">OVER 2.5</div>
                                 <div style="font-size:16px; font-weight:bold; color:#3b82f6;">{h_stats['over_25_pct']:.1f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:6px; padding:8px 4px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600;">BTTS</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600;">BTTS</div>
                                 <div style="font-size:16px; font-weight:bold; color:#3b82f6;">{h_stats['btts_pct']:.1f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:6px; padding:8px 4px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600;">CLEAN SH.</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600;">CLEAN SH.</div>
                                 <div style="font-size:16px; font-weight:bold; color:#3b82f6;">{h_stats['cs_pct']:.1f}%</div>
                             </div>
                         </div>
@@ -1589,7 +1589,7 @@ def render():
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
                         showlegend=False,
-                        xaxis=dict(showgrid=False, tickfont=dict(color='#64748b', size=8)),
+                        xaxis=dict(showgrid=False, tickfont=dict(color='#94a3b8', size=8)),
                         yaxis=dict(visible=False)
                     )
                     st.plotly_chart(fig_mini_h, width="stretch", key="pm_add_mini_h")
@@ -1602,48 +1602,48 @@ def render():
                         </div>
                         <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; text-align:center; margin-bottom:12px;">
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">WIN</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">WIN</div>
                                 <div style="font-size:14px; font-weight:bold; color:#22c55e;">{a_stats['wins']}</div>
-                                <div style="font-size:8px; color:#64748b;">{a_stats['wins']/a_stats['n_matches']*100:.0f}%</div>
+                                <div style="font-size:8px; color:#94a3b8;">{a_stats['wins']/a_stats['n_matches']*100:.0f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">DRW</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">DRW</div>
                                 <div style="font-size:14px; font-weight:bold; color:#f59e0b;">{a_stats['draws']}</div>
-                                <div style="font-size:8px; color:#64748b;">{a_stats['draws']/a_stats['n_matches']*100:.0f}%</div>
+                                <div style="font-size:8px; color:#94a3b8;">{a_stats['draws']/a_stats['n_matches']*100:.0f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">LOS</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">LOS</div>
                                 <div style="font-size:14px; font-weight:bold; color:#ef4444;">{a_stats['losses']}</div>
-                                <div style="font-size:8px; color:#64748b;">{a_stats['losses']/a_stats['n_matches']*100:.0f}%</div>
+                                <div style="font-size:8px; color:#94a3b8;">{a_stats['losses']/a_stats['n_matches']*100:.0f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">GF</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">GF</div>
                                 <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{int(a_stats['goals_scored'])}</div>
-                                <div style="font-size:8px; color:#64748b;">{a_stats['avg_scored']:.1f}/g</div>
+                                <div style="font-size:8px; color:#94a3b8;">{a_stats['avg_scored']:.1f}/g</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">GS</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">GS</div>
                                 <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{int(a_stats['goals_conceded'])}</div>
-                                <div style="font-size:8px; color:#64748b;">{a_stats['avg_conceded']:.1f}/g</div>
+                                <div style="font-size:8px; color:#94a3b8;">{a_stats['avg_conceded']:.1f}/g</div>
                             </div>
                             <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">PTS</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">PTS</div>
                                 <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{a_stats['points']}</div>
-                                <div style="font-size:8px; color:#64748b;">{a_stats['points_avg']:.1f}/g</div>
+                                <div style="font-size:8px; color:#94a3b8;">{a_stats['points_avg']:.1f}/g</div>
                             </div>
                         </div>
                     
                         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; text-align:center; margin-bottom:12px;">
                             <div style="background:#1e293b; border-radius:6px; padding:8px 4px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600;">OVER 2.5</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600;">OVER 2.5</div>
                                 <div style="font-size:16px; font-weight:bold; color:#ef4444;">{a_stats['over_25_pct']:.1f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:6px; padding:8px 4px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600;">BTTS</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600;">BTTS</div>
                                 <div style="font-size:16px; font-weight:bold; color:#ef4444;">{a_stats['btts_pct']:.1f}%</div>
                             </div>
                             <div style="background:#1e293b; border-radius:6px; padding:8px 4px;">
-                                <div style="font-size:8px; color:#94a3b8; font-weight:600;">CLEAN SH.</div>
+                                <div style="font-size:8px; color:#cbd5e1; font-weight:600;">CLEAN SH.</div>
                                 <div style="font-size:16px; font-weight:bold; color:#ef4444;">{a_stats['cs_pct']:.1f}%</div>
                             </div>
                         </div>
@@ -1664,7 +1664,7 @@ def render():
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
                         showlegend=False,
-                        xaxis=dict(showgrid=False, tickfont=dict(color='#64748b', size=8)),
+                        xaxis=dict(showgrid=False, tickfont=dict(color='#94a3b8', size=8)),
                         yaxis=dict(visible=False)
                     )
                     st.plotly_chart(fig_mini_a, width="stretch", key="pm_add_mini_a")
@@ -1725,7 +1725,7 @@ def render():
                     st.plotly_chart(fig_comp, width="stretch", key="pm_add_confronto_bar")
                 
             st.markdown(
-                '<div style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; '
+                '<div style="font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; '
                 'letter-spacing:0.6px; margin:16px 0 8px 0;">Indice di pericolosità</div>',
                 unsafe_allow_html=True,
             )
@@ -1767,13 +1767,13 @@ def render():
             with col_gauge_c:
                 st.html(f"""
                 <div class="pm-box" style="text-align:center; padding:16px 16px 4px 16px;">
-                    <div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                    <div style="font-size:11px; font-weight:700; color:#cbd5e1; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
                         Indice di Pericolosità — {n} Partite Filtrate
                     </div>
                     <div style="font-size:22px; font-weight:800; color:{d_color}; text-transform:uppercase; letter-spacing:2px;">
                         {d_label}
                     </div>
-                    <div style="font-size:11px; color:#64748b; margin-top:4px;">
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">
                         Scala: 0 (bassa) — 2 (alta)
                     </div>
                 </div>
@@ -1822,7 +1822,7 @@ def render():
                 color="#ef4444",
             )
             st.markdown(
-                '<div style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; '
+                '<div style="font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; '
                 'letter-spacing:0.6px; margin:8px 0 10px 0;">Performance su intero database</div>',
                 unsafe_allow_html=True,
             )
@@ -1842,33 +1842,33 @@ def render():
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; text-align:center; margin-bottom:12px;">
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">MAT</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">MAT</div>
                             <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{home_all.get('total_matches', 0)}</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">WIN</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">WIN</div>
                             <div style="font-size:14px; font-weight:bold; color:#22c55e;">{home_all.get('wins', 0)}</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">DRW</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">DRW</div>
                             <div style="font-size:14px; font-weight:bold; color:#f59e0b;">{home_all.get('draws', 0)}</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">LOS</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">LOS</div>
                             <div style="font-size:14px; font-weight:bold; color:#ef4444;">{home_all.get('losses', 0)}</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">GF</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">GF</div>
                             <div style="font-size:12px; font-weight:bold; color:#cbd5e1;">{int(home_all.get('goals_scored_avg', 0) * home_all.get('total_matches', 0))}</div>
-                            <div style="font-size:8px; color:#64748b;">{home_all.get('goals_scored_avg', 0.0):.1f}/g</div>
+                            <div style="font-size:8px; color:#94a3b8;">{home_all.get('goals_scored_avg', 0.0):.1f}/g</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">GS</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">GS</div>
                             <div style="font-size:12px; font-weight:bold; color:#cbd5e1;">{int(away_all.get('goals_conceded_avg', 0) * away_all.get('total_matches', 0))}</div>
-                            <div style="font-size:8px; color:#64748b;">{home_all.get('goals_conceded_avg', 0.0):.1f}/g</div>
+                            <div style="font-size:8px; color:#94a3b8;">{home_all.get('goals_conceded_avg', 0.0):.1f}/g</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">PTS</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">PTS</div>
                             <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{home_all.get('points', 0)}</div>
                         </div>
                     </div>
@@ -1881,7 +1881,7 @@ def render():
                     color = get_pct_color(val)
                     st.markdown(f"""
                     <div style="background:#1e293b; border-radius:6px; padding:8px 4px; text-align:center;">
-                        <div style="font-size:8px; color:#94a3b8; font-weight:600;">OVER 2.5</div>
+                        <div style="font-size:8px; color:#cbd5e1; font-weight:600;">OVER 2.5</div>
                         <p style="color:{color}; font-size:1.1rem; font-weight:bold; margin:0;">{val:.1f}%</p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1890,7 +1890,7 @@ def render():
                     color = get_pct_color(val)
                     st.markdown(f"""
                     <div style="background:#1e293b; border-radius:6px; padding:8px 4px; text-align:center;">
-                        <div style="font-size:8px; color:#94a3b8; font-weight:600;">BTTS</div>
+                        <div style="font-size:8px; color:#cbd5e1; font-weight:600;">BTTS</div>
                         <p style="color:{color}; font-size:1.1rem; font-weight:bold; margin:0;">{val:.1f}%</p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1899,7 +1899,7 @@ def render():
                     color = get_pct_color(val)
                     st.markdown(f"""
                     <div style="background:#1e293b; border-radius:6px; padding:8px 4px; text-align:center;">
-                        <div style="font-size:8px; color:#94a3b8; font-weight:600;">CLEAN SH.</div>
+                        <div style="font-size:8px; color:#cbd5e1; font-weight:600;">CLEAN SH.</div>
                         <p style="color:{color}; font-size:1.1rem; font-weight:bold; margin:0;">{val:.1f}%</p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1918,7 +1918,7 @@ def render():
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
                     showlegend=False,
-                    xaxis=dict(showgrid=False, tickfont=dict(color='#64748b', size=8)),
+                    xaxis=dict(showgrid=False, tickfont=dict(color='#94a3b8', size=8)),
                     yaxis=dict(visible=False),
                     font=dict(color="#e2e8f0")
                 )
@@ -2019,33 +2019,33 @@ def render():
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; text-align:center; margin-bottom:12px;">
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">MAT</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">MAT</div>
                             <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{away_all.get('total_matches', 0)}</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">WIN</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">WIN</div>
                             <div style="font-size:14px; font-weight:bold; color:#22c55e;">{away_all.get('wins', 0)}</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">DRW</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">DRW</div>
                             <div style="font-size:14px; font-weight:bold; color:#f59e0b;">{away_all.get('draws', 0)}</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">LOS</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">LOS</div>
                             <div style="font-size:14px; font-weight:bold; color:#ef4444;">{away_all.get('losses', 0)}</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">GF</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">GF</div>
                             <div style="font-size:12px; font-weight:bold; color:#cbd5e1;">{int(away_all.get('goals_scored_avg', 0) * away_all.get('total_matches', 0))}</div>
-                            <div style="font-size:8px; color:#64748b;">{away_all.get('goals_scored_avg', 0.0):.1f}/g</div>
+                            <div style="font-size:8px; color:#94a3b8;">{away_all.get('goals_scored_avg', 0.0):.1f}/g</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">GS</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">GS</div>
                             <div style="font-size:12px; font-weight:bold; color:#cbd5e1;">{int(away_all.get('goals_conceded_avg', 0) * away_all.get('total_matches', 0))}</div>
-                            <div style="font-size:8px; color:#64748b;">{away_all.get('goals_conceded_avg', 0.0):.1f}/g</div>
+                            <div style="font-size:8px; color:#94a3b8;">{away_all.get('goals_conceded_avg', 0.0):.1f}/g</div>
                         </div>
                         <div style="background:#1e293b; border-radius:4px; padding:4px 2px;">
-                            <div style="font-size:8px; color:#94a3b8; font-weight:600; text-transform:uppercase;">PTS</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600; text-transform:uppercase;">PTS</div>
                             <div style="font-size:14px; font-weight:bold; color:#cbd5e1;">{away_all.get('points', 0)}</div>
                         </div>
                     </div>
@@ -2058,7 +2058,7 @@ def render():
                     color = get_pct_color(val)
                     st.markdown(f"""
                     <div style="background:#1e293b; border-radius:6px; padding:8px 4px; text-align:center;">
-                        <div style="font-size:8px; color:#94a3b8; font-weight:600;">OVER 2.5</div>
+                        <div style="font-size:8px; color:#cbd5e1; font-weight:600;">OVER 2.5</div>
                         <p style="color:{color}; font-size:1.1rem; font-weight:bold; margin:0;">{val:.1f}%</p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -2067,7 +2067,7 @@ def render():
                     color = get_pct_color(val)
                     st.markdown(f"""
                     <div style="background:#1e293b; border-radius:6px; padding:8px 4px; text-align:center;">
-                        <div style="font-size:8px; color:#94a3b8; font-weight:600;">BTTS</div>
+                        <div style="font-size:8px; color:#cbd5e1; font-weight:600;">BTTS</div>
                         <p style="color:{color}; font-size:1.1rem; font-weight:bold; margin:0;">{val:.1f}%</p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -2076,7 +2076,7 @@ def render():
                     color = get_pct_color(val)
                     st.markdown(f"""
                     <div style="background:#1e293b; border-radius:6px; padding:8px 4px; text-align:center;">
-                        <div style="font-size:8px; color:#94a3b8; font-weight:600;">CLEAN SH.</div>
+                        <div style="font-size:8px; color:#cbd5e1; font-weight:600;">CLEAN SH.</div>
                         <p style="color:{color}; font-size:1.1rem; font-weight:bold; margin:0;">{val:.1f}%</p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -2095,14 +2095,14 @@ def render():
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
                     showlegend=False,
-                    xaxis=dict(showgrid=False, tickfont=dict(color='#64748b', size=8)),
+                    xaxis=dict(showgrid=False, tickfont=dict(color='#94a3b8', size=8)),
                     yaxis=dict(visible=False),
                     font=dict(color="#e2e8f0")
                 )
                 st.plotly_chart(fig_mini_a, use_container_width=True, key="pm_away_all_interval")
 
             st.markdown(
-                '<div style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; '
+                '<div style="font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; '
                 'letter-spacing:0.6px; margin:20px 0 10px 0;">Serie storica — ultime 10 sfide</div>',
                 unsafe_allow_html=True,
             )
@@ -2139,8 +2139,8 @@ def render():
                         styles[casa_idx] = "color: #ef4444;"
                         styles[trasferta_idx] = "color: #22c55e; font-weight: bold;"
                     else:
-                        styles[casa_idx] = "color: #94a3b8;"
-                        styles[trasferta_idx] = "color: #94a3b8;"
+                        styles[casa_idx] = "color: #cbd5e1;"
+                        styles[trasferta_idx] = "color: #cbd5e1;"
                     return styles
 
                 styled_h2h = h2h_df.style.apply(style_h2h_rows, axis=1)
@@ -2155,7 +2155,7 @@ def render():
         _section_header(
             "11", "Esporta",
             "Scarica riepilogo, partite filtrate e ROI in Excel",
-            color="#64748b",
+            color="#94a3b8",
         )
         buf = _export_excel(results, filtered)
         st.download_button(
@@ -2167,7 +2167,7 @@ def render():
         )
     
         st.html(f"""
-        <div style="text-align:center; font-size:10px; color:#64748b; margin-top:32px;">
+        <div style="text-align:center; font-size:10px; color:#94a3b8; margin-top:32px;">
             I dati si riferiscono alle partite presenti nel database e possono variare in base ai filtri applicati. 
             — Ultimo aggiornamento: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         </div>

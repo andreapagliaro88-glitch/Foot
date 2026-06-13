@@ -26,7 +26,7 @@ from utils import (
 C_BG = "#111827"
 C_BORDER = "#1f2937"
 C_TEXT = "#f1f5f9"
-C_MUTED = "#94a3b8"
+C_MUTED = "#cbd5e1"
 C_GREEN = "#22c55e"
 C_ACCENT = "#60a5fa"
 _COLS_PER_ROW = 6

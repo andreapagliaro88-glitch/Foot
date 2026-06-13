@@ -3,6 +3,15 @@ import pandas as pd
 
 from strategy_simulator import find_best_strategy
 
+# Etichette leggibili su sfondo scuro
+_LBL = "font-size:11px;color:#e2e8f0;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;"
+_META = "font-size:12px;color:#f1f5f9;font-weight:500;"
+_COUNT = "color:#f8fafc;font-weight:800;"
+_INSIGHT = "font-size:14px;color:#f1f5f9;line-height:1.65;font-weight:500;"
+_HIGH = 'color:#f8fafc;font-weight:800;'
+_ACCENT = 'color:#38bdf8;font-weight:800;'
+_WARN = 'color:#fbbf24;font-weight:700;'
+
 
 def calculate_edges(probabilities, odds):
     edges = {}
@@ -266,7 +275,7 @@ def _render_strategies_html(strategies: list[dict], edge_warning: str = "") -> s
             f'{s["title"]} '
             f'<span style="color:#64748b; font-weight:600; font-size:10px;">(CONF: {s["conf"]})</span>'
             f'</div>'
-            f'<div style="font-size:11px; color:#94a3b8; line-height:1.4;">{s["subtitle"]}</div>'
+            f'<div style="font-size:11px; color:#cbd5e1; line-height:1.4;">{s["subtitle"]}</div>'
             f'{timing_html}'
             f'</div>'
         )
@@ -322,18 +331,20 @@ def _timing_text(early15_pct, late_goal_pct):
 def _insight_body(over25_pct, btts_pct, avg_goals):
     if over25_pct >= 55:
         return (
-            f"Alta concentrazione di partite con <b>3+ gol ({over25_pct:.0f}%)</b> e "
-            f"<b>BTTS ({btts_pct:.0f}%)</b>. "
-            f"Il modello indica una struttura offensiva stabile, non casuale."
+            f'Alta concentrazione di partite con <span style="{_HIGH}">3+ gol ({over25_pct:.0f}%)</span> e '
+            f'<span style="{_ACCENT}">BTTS ({btts_pct:.0f}%)</span>. '
+            f'Il modello indica una struttura <span style="{_HIGH}">offensiva stabile</span>, non casuale.'
         )
     if over25_pct < 45:
         return (
-            f"Match tendenzialmente chiuso: solo <b>{over25_pct:.0f}%</b> supera 2.5 gol. "
-            f"BTTS al <b>{btts_pct:.0f}%</b> — cautela su mercati offensivi."
+            f'Match tendenzialmente chiuso: solo <span style="{_HIGH}">{over25_pct:.0f}%</span> supera 2.5 gol. '
+            f'BTTS al <span style="{_ACCENT}">{btts_pct:.0f}%</span> — '
+            f'<span style="{_WARN}">cautela su mercati offensivi.</span>'
         )
     return (
-        f"Profilo equilibrato: <b>{over25_pct:.0f}%</b> over 2.5, media <b>{avg_goals:.1f}</b> gol. "
-        f"BTTS <b>{btts_pct:.0f}%</b> — attendere segnali live."
+        f'Profilo equilibrato: <span style="{_HIGH}">{over25_pct:.0f}%</span> over 2.5, '
+        f'media <span style="{_HIGH}">{avg_goals:.1f}</span> gol. '
+        f'BTTS <span style="{_ACCENT}">{btts_pct:.0f}%</span> — attendere segnali live.'
     )
 
 
@@ -354,46 +365,46 @@ def _render_power_insight(insights):
     worst_market = ed["worst_market"] if ed else "N/D"
 
     return f"""
-    <div style="background:#0f172a; border:1px solid #1e293b; border-radius:10px; padding:18px;">
+    <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:18px;">
 
-        <div style="font-size:11px; color:#64748b; font-weight:700; letter-spacing:1px;
-                    text-transform:uppercase; margin-bottom:6px;">
+        <div style="{_LBL} letter-spacing:1px; margin-bottom:6px;">
             💡 INSIGHT PRINCIPALE
         </div>
 
-        <div style="font-size:20px; font-weight:800; color:#f59e0b; margin-bottom:8px;">
+        <div style="font-size:20px; font-weight:800; color:#fbbf24; margin-bottom:10px; line-height:1.3;">
             {insights["insight_title"]}
         </div>
 
-        <div style="font-size:13px; color:#cbd5e1; line-height:1.5; margin-bottom:12px;">
+        <div style="{_INSIGHT} margin-bottom:14px;">
             {insights["insight_body"]}
         </div>
 
         <div style="display:flex; gap:12px; margin-bottom:12px;">
-            <div style="flex:1; background:#111827; border:1px solid #1f2937; border-radius:8px; padding:10px;">
-                <div style="font-size:10px; color:#64748b;">🟢 EDGE MIGLIORE</div>
+            <div style="flex:1; background:#111827; border:1px solid #334155; border-radius:8px; padding:10px;">
+                <div style="{_LBL}">🟢 EDGE MIGLIORE</div>
                 <div style="font-size:18px; font-weight:800; color:#22c55e;">{best_edge:+.0f}%</div>
-                <div style="font-size:10px; color:#94a3b8;">{best_market}</div>
+                <div style="{_META}">{best_market}</div>
             </div>
-            <div style="flex:1; background:#111827; border:1px solid #1f2937; border-radius:8px; padding:10px;">
-                <div style="font-size:10px; color:#64748b;">🔴 RISCHIO</div>
+            <div style="flex:1; background:#111827; border:1px solid #334155; border-radius:8px; padding:10px;">
+                <div style="{_LBL}">🔴 RISCHIO</div>
                 <div style="font-size:18px; font-weight:800; color:#ef4444;">{worst_edge:.0f}%</div>
-                <div style="font-size:10px; color:#94a3b8;">{worst_market}</div>
+                <div style="{_META}">{worst_market}</div>
             </div>
-            <div style="flex:1; background:#111827; border:1px solid #1f2937; border-radius:8px; padding:10px;">
-                <div style="font-size:10px; color:#64748b;">⚖️ QUALITÀ</div>
+            <div style="flex:1; background:#111827; border:1px solid #334155; border-radius:8px; padding:10px;">
+                <div style="{_LBL}">⚖️ QUALITÀ</div>
                 <div style="font-size:18px; font-weight:800; color:#3b82f6;">{edge_spread:.0f}%</div>
-                <div style="font-size:10px; color:#94a3b8;">{insights["quality_label"]}</div>
+                <div style="{_META}">{insights["quality_label"]}</div>
             </div>
         </div>
 
-        <div style="background:#111827; border:1px solid #1f2937; border-radius:8px; padding:10px; margin-bottom:10px;">
-            <div style="font-size:10px; color:#64748b; margin-bottom:4px;">⏱ TIMING EDGE</div>
-            <div style="font-size:13px; color:#e2e8f0;">{insights["timing_text"]}</div>
+        <div style="background:#111827; border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:10px;">
+            <div style="{_LBL} margin-bottom:6px;">⏱ TIMING EDGE</div>
+            <div style="font-size:14px; color:#f1f5f9; font-weight:500; line-height:1.5;">{insights["timing_text"]}</div>
         </div>
 
-        <div style="font-size:13px; color:#94a3b8; border-top:1px solid #1f2937; padding-top:10px;">
-            🎯 <b>Strategia:</b> {insights["final_decision"]}
+        <div style="font-size:14px; color:#e2e8f0; border-top:1px solid #334155; padding-top:12px; line-height:1.5;">
+            🎯 <b style="color:#f8fafc;">Strategia:</b>
+            <span style="color:#fbbf24; font-weight:700;"> {insights["final_decision"]}</span>
         </div>
     </div>
     """
@@ -530,12 +541,13 @@ def compute_header_insights(hw_pct, dr_pct, aw_pct, n, results, filtered,
 def _outcome_bar(pct, color, icon, label):
     w = min(max(pct, 0), 100)
     return f"""
-    <div style="margin-bottom:6px;">
-        <div style="display:flex; justify-content:space-between; font-size:10px; color:#94a3b8;">
-            <span>{icon} {label}</span><span style="font-weight:700; color:#e2e8f0;">{pct:.1f}%</span>
+    <div style="margin-bottom:9px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; color:#e2e8f0; font-weight:600;">{icon} {label}</span>
+            <span style="font-size:14px; font-weight:800; color:#f8fafc;">{pct:.1f}%</span>
         </div>
-        <div style="background:#1f2937; height:5px; border-radius:3px; overflow:hidden;">
-            <div style="width:{w}%; height:100%; background:{color};"></div>
+        <div style="background:#1f2937; height:7px; border-radius:4px; overflow:hidden; margin-top:5px;">
+            <div style="width:{w}%; height:100%; background:{color}; box-shadow:0 0 8px {color}55;"></div>
         </div>
     </div>
     """
@@ -552,19 +564,24 @@ def _seg_bar(pct, color, segments=10):
 
 
 def _donut_esiti(hw, dr, aw):
+    best_pct = max(hw, dr, aw)
+    best_col = "#3b82f6" if hw >= dr and hw >= aw else ("#f59e0b" if dr >= aw else "#f97316")
     return f"""
-    <div style="display:flex; align-items:center; gap:10px;">
-        <div style="width:72px; height:72px; border-radius:50%; flex-shrink:0;
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:76px; height:76px; border-radius:50%; flex-shrink:0;
                     background:conic-gradient(
                         #3b82f6 0% {hw}%,
                         #f59e0b {hw}% {hw + dr}%,
                         #f97316 {hw + dr}% 100%
-                    ); position:relative;">
-            <div style="position:absolute; inset:14px; background:#111827; border-radius:50%;
-                        display:flex; align-items:center; justify-content:center;
-                        font-size:9px; color:#64748b; font-weight:700;">1X2</div>
+                    ); position:relative; box-shadow:0 0 12px #00000040;">
+            <div style="position:absolute; inset:11px; background:#0f172a; border-radius:50%;
+                        border:1px solid #334155;
+                        display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                <div style="font-size:10px; color:#cbd5e1; font-weight:700; letter-spacing:0.06em;">1X2</div>
+                <div style="font-size:13px; color:{best_col}; font-weight:900; line-height:1.1;">{best_pct:.0f}%</div>
+            </div>
         </div>
-        <div style="flex:1;">
+        <div style="flex:1; min-width:0;">
             {_outcome_bar(hw, "#3b82f6", "🏠", "Casa")}
             {_outcome_bar(dr, "#f59e0b", "🤝", "X")}
             {_outcome_bar(aw, "#f97316", "✈️", "2")}
@@ -602,65 +619,71 @@ def render_premium_header(hw_pct, dr_pct, aw_pct, n, insights):
         <!-- ROW 1: 5 cards -->
         <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr 1fr; gap:10px; margin-bottom:12px;">
 
-            <div style="background:#111827; padding:12px; border-radius:10px; border:1px solid #1f2937;">
-                <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase;
-                            margin-bottom:8px;">ESITI FINALI</div>
+            <div style="background:#111827; padding:14px; border-radius:10px; border:1px solid #1f2937;">
+                <div style="{_LBL} margin-bottom:10px;">ESITI FINALI</div>
                 {_donut_esiti(hw_pct, dr_pct, aw_pct)}
-                <div style="font-size:9px; color:#64748b; margin-top:8px; border-top:1px solid #1f2937;
-                            padding-top:6px;">PARTITE ANALIZZATE: <b style="color:#f1f5f9;">{n}</b></div>
+                <div style="margin-top:12px; border-top:1px solid #334155; padding-top:10px;
+                            display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+                    <span style="font-size:11px; color:#cbd5e1; font-weight:700; letter-spacing:0.04em;">
+                        PARTITE ANALIZZATE</span>
+                    <span style="{_COUNT} font-size:18px;">{f"{n:,}".replace(",", ".")}</span>
+                </div>
             </div>
 
             <div style="background:#111827; padding:12px; border-radius:10px; border:1px solid #1f2937;
                         text-align:center;">
-                <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase;">
+                <div style="{_LBL}">
                     MEDIA GOL PARTITA</div>
                 <div style="font-size:30px; color:{goal_color}; font-weight:800; margin:6px 0;">{avg:.2f}</div>
-                <div style="font-size:9px; color:{goal_color}; font-weight:700;">
+                <div style="font-size:11px; color:{goal_color}; font-weight:700;">
                     {"OVER 2.5" if avg >= 2.5 else "UNDER 2.5"}</div>
                 <div style="height:5px; background:#1f2937; border-radius:3px; margin:8px 4px 0; overflow:hidden;">
                     <div style="width:{goal_w}%; height:100%; background:{goal_color};"></div>
                 </div>
-                <div style="font-size:8px; color:#64748b; margin-top:6px;">
-                    {n:,} PARTITE FILTRATE · {insights["total_goals"]} GOL TOTALI</div>
+                <div style="{_META} margin-top:8px;">
+                    <span style="{_COUNT}">{n:,}</span> PARTITE FILTRATE ·
+                    <span style="{_COUNT}">{insights["total_goals"]}</span> GOL TOTALI</div>
             </div>
 
             <div style="background:#111827; padding:12px; border-radius:10px; text-align:center;
                         border:2px solid #22c55e; box-shadow:0 0 14px #22c55e35;">
-                <div style="font-size:9px; color:#64748b; font-weight:700;">🟢 EDGE PIÙ ALTO</div>
+                <div style="{_LBL}">🟢 EDGE PIÙ ALTO</div>
                 <div style="font-size:26px; font-weight:800; color:#22c55e; margin:6px 0;">{em:+.0f}%</div>
-                <div style="font-size:9px; color:#22c55e; font-weight:600;">{best_m}</div>
-                <div style="font-size:8px; color:#64748b; margin-top:8px;">CONFIDENCE</div>
+                <div style="font-size:11px; color:#22c55e; font-weight:600;">{best_m}</div>
+                <div style="{_LBL} margin-top:8px;">CONFIDENCE</div>
                 <div style="height:4px; background:#1f2937; border-radius:3px; margin-top:3px;">
                     <div style="width:{conf_max * 10}%; height:100%; background:#22c55e;"></div>
                 </div>
-                <div style="font-size:10px; color:#22c55e; font-weight:700;">{conf_max}/10</div>
-                <div style="font-size:8px; color:#64748b; margin-top:6px;">su {edge_n:,} partite filtrate</div>
+                <div style="font-size:12px; color:#22c55e; font-weight:700;">{conf_max}/10</div>
+                <div style="{_META} margin-top:6px;">su
+                    <span style="{_COUNT}">{edge_n:,}</span> partite filtrate</div>
             </div>
 
             <div style="background:#111827; padding:12px; border-radius:10px; text-align:center;
                         border:2px solid #ef4444;">
-                <div style="font-size:9px; color:#64748b; font-weight:700;">🔴 EDGE PIÙ BASSO</div>
+                <div style="{_LBL}">🔴 EDGE PIÙ BASSO</div>
                 <div style="font-size:26px; font-weight:800; color:#ef4444; margin:6px 0;">{en:+.0f}%</div>
-                <div style="font-size:9px; color:#ef4444; font-weight:600;">{worst_m}</div>
-                <div style="font-size:8px; color:#64748b; margin-top:8px;">CONFIDENCE</div>
+                <div style="font-size:11px; color:#ef4444; font-weight:600;">{worst_m}</div>
+                <div style="{_LBL} margin-top:8px;">CONFIDENCE</div>
                 <div style="height:4px; background:#1f2937; border-radius:3px; margin-top:3px;">
                     <div style="width:{conf_min * 10}%; height:100%; background:#ef4444;"></div>
                 </div>
-                <div style="font-size:10px; color:#ef4444; font-weight:700;">{conf_min}/10</div>
-                <div style="font-size:8px; color:#64748b; margin-top:6px;">su {edge_n:,} partite filtrate</div>
+                <div style="font-size:12px; color:#ef4444; font-weight:700;">{conf_min}/10</div>
+                <div style="{_META} margin-top:6px;">su
+                    <span style="{_COUNT}">{edge_n:,}</span> partite filtrate</div>
             </div>
 
             <div style="background:#111827; padding:12px; border-radius:10px; border:1px solid #1f2937;
                         text-align:center;">
-                <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase;">
+                <div style="{_LBL}">
                     EQUILIBRIO PARTITA</div>
                 <div style="font-size:30px; font-weight:800; color:{eq_color}; margin:6px 0;">{eq}</div>
                 <div style="height:5px; background:#1f2937; border-radius:3px; overflow:hidden;">
                     <div style="width:{eq}%; height:100%; background:{eq_color};"></div>
                 </div>
-                <div style="font-size:10px; color:{eq_color}; font-weight:700; margin-top:6px;">
+                <div style="font-size:12px; color:{eq_color}; font-weight:700; margin-top:6px;">
                     {insights["eq_label"]}</div>
-                <div style="font-size:8px; color:#64748b; margin-top:3px;">{insights["eq_subtext"]}</div>
+                <div style="{_META} margin-top:4px;">{insights["eq_subtext"]}</div>
             </div>
         </div>
     """)
@@ -669,31 +692,31 @@ def render_premium_header(hw_pct, dr_pct, aw_pct, n, insights):
         <!-- ROW 2: 4 mini-cards -->
         <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px;">
             <div style="background:#111827; padding:10px; border-radius:8px; border:1px solid #1f2937;">
-                <div style="font-size:8px; color:#64748b; font-weight:700;">⚡ TEMPO DEL GOL</div>
+                <div style="{_LBL}">⚡ TEMPO DEL GOL</div>
                 <div style="font-size:13px; font-weight:800; color:{insights["timing_color"]}; margin:4px 0;">
                     {insights["timing_label"]}</div>
-                <div style="font-size:9px; color:#94a3b8;">{insights["timing_pct"]:.0f}% dei gol</div>
+                <div style="{_META}">{insights["timing_pct"]:.0f}% dei gol</div>
                 {_seg_bar(insights["timing_pct"], insights["timing_color"])}
             </div>
             <div style="background:#111827; padding:10px; border-radius:8px; border:1px solid #1f2937;">
-                <div style="font-size:8px; color:#64748b; font-weight:700;">🎯 RANGE PIÙ FREQUENTE</div>
+                <div style="{_LBL}">🎯 RANGE PIÙ FREQUENTE</div>
                 <div style="font-size:13px; font-weight:800; color:#f59e0b; margin:4px 0;">
                     {insights["best_range_label"]}</div>
-                <div style="font-size:9px; color:#94a3b8;">{insights["range_pct"]:.0f}% delle partite</div>
+                <div style="{_META}">{insights["range_pct"]:.0f}% delle partite</div>
                 {_seg_bar(insights["range_pct"], "#f59e0b")}
             </div>
             <div style="background:#111827; padding:10px; border-radius:8px; border:1px solid #1f2937;">
-                <div style="font-size:8px; color:#64748b; font-weight:700;">🛡️ AFFIDABILITÀ</div>
+                <div style="{_LBL}">🛡️ AFFIDABILITÀ</div>
                 <div style="font-size:13px; font-weight:800; color:{insights["reliability_color"]}; margin:4px 0;">
                     {insights["reliability"]}</div>
-                <div style="font-size:9px; color:#94a3b8;">{n} partite analizzate</div>
+                <div style="{_META}"><span style="{_COUNT}">{n:,}</span> partite analizzate</div>
                 {_seg_bar(insights["reliability_bar"], insights["reliability_color"])}
             </div>
             <div style="background:#111827; padding:10px; border-radius:8px; border:1px solid #1f2937;">
-                <div style="font-size:8px; color:#64748b; font-weight:700;">⏱️ MOMENTO CHIAVE</div>
+                <div style="{_LBL}">⏱️ MOMENTO CHIAVE</div>
                 <div style="font-size:13px; font-weight:800; color:#a855f7; margin:4px 0;">
                     {insights["key_moment"]}</div>
-                <div style="font-size:9px; color:#94a3b8;">Periodo più produttivo</div>
+                <div style="{_META}">Periodo più produttivo</div>
                 {_seg_bar(insights["key_moment_pct"], "#a855f7")}
             </div>
         </div>

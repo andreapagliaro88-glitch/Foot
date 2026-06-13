@@ -18,70 +18,70 @@ st.set_page_config(
 # ── Ensure project root is on path ────────────────────────────────────────
 sys.path.insert(0, os.path.dirname(__file__))
 
-from database import init_db, get_league_season_stats, delete_league_data, get_leagues
+from database import init_db, get_league_season_stats, delete_league_data, get_leagues, get_match_count, sync_db_cache_on_startup
+from ui_theme import GLOBAL_READABILITY_CSS
 from data_loader import load_csv
 from utils import build_league_name, split_league_name
 
 # ── Initialise database on startup ────────────────────────────────────────
 init_db()
+sync_db_cache_on_startup()
 
 # ── Custom CSS (injected once per session) ────────────────────────────────
 if not st.session_state.get("_app_css_loaded"):
     st.session_state._app_css_loaded = True
-    st.html("""
+    st.html(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-    .stApp { background-color: #0f172a; color: #e2e8f0; }
+    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
+    .stApp {{ background-color: #0f172a; color: #e2e8f0; }}
     @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap');
-    [data-testid="stSidebar"] {
+    [data-testid="stSidebar"] {{
         background: #0d1b2a !important;
         border-right: 1px solid #1e3a5f !important;
         padding-top: 0 !important;
-    }
-    [data-testid="stSidebar"] .stMarkdown { color: #94a3b8; }
-    /* Remove default top padding so FILTRI header touches the top */
-    [data-testid="stSidebar"] > div:first-child { padding-top: 0 !important; }
-    /* Nav radio styling */
-    [data-testid="stSidebar"] .stRadio label { color: #cbd5e1 !important; font-size: 0.88rem !important; }
-    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"] div { border-color: #3b82f6 !important; }
-    /* Caption */
-    [data-testid="stSidebar"] .stCaption { color: #475569 !important; font-size: 0.72rem !important; }
-    [data-testid="stMetric"] {
+    }}
+    [data-testid="stSidebar"] .stMarkdown {{ color: #cbd5e1; }}
+    [data-testid="stSidebar"] > div:first-child {{ padding-top: 0 !important; }}
+    [data-testid="stSidebar"] .stRadio label {{ color: #e2e8f0 !important; font-size: 0.88rem !important; }}
+    [data-testid="stSidebar"] .stRadio [data-baseweb="radio"] div {{ border-color: #3b82f6 !important; }}
+    [data-testid="stSidebar"] .stCaption {{ color: #94a3b8 !important; font-size: 0.8rem !important; }}
+    [data-testid="stMetric"] {{
         background: #1e293b;
         border: 1px solid #334155;
         border-radius: 12px;
         padding: 16px 20px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    [data-testid="stMetric"]:hover {
+    }}
+    [data-testid="stMetric"]:hover {{
         transform: translateY(-2px);
         box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    }
-    [data-testid="stMetricLabel"] { color: #94a3b8 !important; font-size: 0.8rem; }
-    [data-testid="stMetricValue"] { color: #f1f5f9 !important; font-size: 1.6rem; font-weight: 700; }
-    .stButton > button {
+    }}
+    [data-testid="stMetricLabel"] {{ color: #cbd5e1 !important; font-size: 0.85rem; }}
+    [data-testid="stMetricValue"] {{ color: #f8fafc !important; font-size: 1.6rem; font-weight: 700; }}
+    .stButton > button {{
         background: linear-gradient(135deg, #3b82f6, #2563eb);
         color: white;
         border: none;
         border-radius: 8px;
         font-weight: 600;
         transition: all 0.2s ease;
-    }
-    .stButton > button:hover {
+    }}
+    .stButton > button:hover {{
         background: linear-gradient(135deg, #2563eb, #1d4ed8);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(59,130,246,0.4);
-    }
-    .stDataFrame { border-radius: 10px; overflow: hidden; }
-    [data-testid="stDataFrame"] > div { background: #1e293b; }
-    h1 { color: #f1f5f9 !important; font-weight: 700; }
-    h2, h3 { color: #cbd5e1 !important; font-weight: 600; }
-    .stAlert { border-radius: 10px; }
-    .stTabs [data-baseweb="tab-list"] { background: #1e293b; border-radius: 10px; padding: 4px; }
-    .stTabs [data-baseweb="tab"] { color: #94a3b8; border-radius: 8px; }
-    .stTabs [aria-selected="true"] { background: #3b82f6 !important; color: white !important; }
-    hr { border-color: #334155; }
+    }}
+    .stDataFrame {{ border-radius: 10px; overflow: hidden; }}
+    [data-testid="stDataFrame"] > div {{ background: #1e293b; }}
+    h1 {{ color: #f8fafc !important; font-weight: 700; }}
+    h2, h3 {{ color: #e2e8f0 !important; font-weight: 600; }}
+    .stAlert {{ border-radius: 10px; }}
+    .stTabs [data-baseweb="tab-list"] {{ background: #1e293b; border-radius: 10px; padding: 4px; }}
+    .stTabs [data-baseweb="tab"] {{ color: #cbd5e1; border-radius: 8px; font-weight: 600; }}
+    .stTabs [aria-selected="true"] {{ background: #3b82f6 !important; color: white !important; }}
+    hr {{ border-color: #334155; }}
+    {GLOBAL_READABILITY_CSS}
 </style>
 """)
 
@@ -143,7 +143,7 @@ section[data-testid="stMain"] .block-container { padding-top: 0.8rem !important;
     border:none !important;
     border-bottom:3px solid transparent !important;
     border-radius:0 !important;
-    color:#94a3b8 !important;
+    color:#cbd5e1 !important;
     font-family:'Rajdhani','Inter',sans-serif;
     font-weight:700; font-size:0.8rem; letter-spacing:0.07em;
     text-transform:uppercase;
@@ -419,6 +419,7 @@ with st.container(key="goaledge_header"):
 
     with c_nav:
         nav_cols = st.columns(len(_NAV_LABELS))
+        db_match_count = get_match_count()
         for col, label in zip(nav_cols, _NAV_LABELS):
             page = TOP_PAGES[label]
             with col:
@@ -427,6 +428,14 @@ with st.container(key="goaledge_header"):
                         st.session_state.active_page = page
                         st.session_state._last_main_page = page
                         st.rerun()
+                    if page == "riepilogo":
+                        count_txt = f"{db_match_count:,}".replace(",", ".")
+                        st.markdown(
+                            f'<div style="font-size:12px;color:#cbd5e1;text-align:center;'
+                            f'margin-top:2px;line-height:1.3;">'
+                            f'📊 <b style="color:#f8fafc;font-size:13px;">{count_txt}</b> partite</div>',
+                            unsafe_allow_html=True,
+                        )
 
     with c_actions:
         with st.container(key="goaledge_actions"):

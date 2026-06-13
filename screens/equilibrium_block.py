@@ -88,7 +88,7 @@ def render_equilibrium_block(home_pct, draw_pct, away_pct, total_matches):
         <div style="
             margin-top:8px;
             font-size:12px;
-            color:#94a3b8;
+            color:#cbd5e1;
             text-align:center;
         ">
             🏠 {home_pct:.1f}% • 🤝 {draw_pct:.1f}% • ✈️ {away_pct:.1f}%
@@ -97,18 +97,18 @@ def render_equilibrium_block(home_pct, draw_pct, away_pct, total_matches):
             margin-top:6px;
             font-size:12px;
             text-align:center;
-            color:#94a3b8;
+            color:#cbd5e1;
         ">
             📊 Squilibrio: <b>{delta:.1f}%</b> •
             <span style="color:{fav_color}; font-weight:700;">{fav}</span>
         </div>
         <div style="
             margin-top:6px;
-            font-size:11px;
+            font-size:12px;
             text-align:center;
-            color:#64748b;
+            color:#e2e8f0;
         ">
-            📦 Campione: {total_matches} partite • Affidabilità: {confidence}
+            📦 Campione: <b style="color:#f8fafc;">{total_matches}</b> partite • Affidabilità: <b style="color:#f8fafc;">{confidence}</b>
         </div>
         <div style="
             margin-top:10px;

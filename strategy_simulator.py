@@ -7,7 +7,7 @@ from __future__ import annotations
 import pandas as pd
 import numpy as np
 
-from calculations import estimate_lay_00_odds, LAY_00_MIN_ODDS
+from calculations import estimate_lay_00_odds, LAY_00_MIN_ODDS, lay_best_odds
 from advanced_over_strategy import AdvancedOverStrategy
 from utils import get_first_goal_detail
 
@@ -436,6 +436,8 @@ def calculate_bet_result(row, strategy_config: dict, stake: float) -> float:
     win = _strategy_wins(row, strategy_config)
     stake = float(stake)
     mode = strategy_config.get("mode", "back")
+    if mode == "lay":
+        odds = lay_best_odds(odds) or odds
     if mode == "back":
         return stake * (odds - 1) if win else -stake
     if mode == "lay":
@@ -458,6 +460,7 @@ def _lay_affordable(row, strategy_config: dict, stake: float, bankroll: float) -
     odds = _resolve_odds(row, strategy_config)
     if odds is None or odds <= 1:
         return False
+    odds = lay_best_odds(odds) or odds
     liability = stake * (odds - 1)
     return stake > 0 and liability <= bankroll
 
@@ -519,6 +522,8 @@ def run_simulation(
             continue
 
         odds_used = _resolve_odds(row, cfg)
+        if cfg.get("mode") == "lay" and odds_used is not None:
+            odds_used = lay_best_odds(odds_used) or odds_used
         if is_advanced_over and over_strategy:
             result, over_meta = _advanced_over_bet_result(row, over_strategy, current_stake)
             if result == 0.0 and not over_meta:

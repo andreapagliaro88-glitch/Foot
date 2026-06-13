@@ -1,5 +1,7 @@
 import streamlit as st
 
+from calculations import lay_best_odds
+
 
 def _badge(roi):
     if roi > 30:
@@ -29,7 +31,7 @@ def _format_odds(odds) -> str:
     if val <= 0:
         return ""
     return (
-        f'<span style="color:#64748b; font-size:11px; margin-left:6px; font-weight:600;">'
+        f'<span style="color:#94a3b8; font-size:11px; margin-left:6px; font-weight:600;">'
         f"@{val:.2f}</span>"
     )
 
@@ -38,7 +40,7 @@ def render_roi_dashboard(data):
     lay_over_results = []
 
     for row in data.get("over_under", []):
-        odds = row["odds"]
+        odds = lay_best_odds(row["odds"]) or row["odds"]
         wins = row["wins"]
         losses = row["losses"]
         total = wins + losses
@@ -99,10 +101,10 @@ def render_roi_dashboard(data):
         best = top_roi[0]
         suggestion = f"""
         <div style="margin-top:12px; padding-top:10px; border-top:1px solid #1f2937;
-                    font-size:11px; color:#94a3b8;">
+                    font-size:11px; color:#cbd5e1;">
             💡 Gioca: <span style="color:#22c55e; font-weight:700;">{best_pick}</span>
             {_format_odds(best.get('odds'))}
-            <span style="color:#64748b;"> · {_format_profit(best['profit'], best['roi'])}</span>
+            <span style="color:#94a3b8;"> · {_format_profit(best['profit'], best['roi'])}</span>
         </div>
         """
 
@@ -110,7 +112,7 @@ def render_roi_dashboard(data):
     <div class="pm-box" style="padding:16px;">
         <div style="display:flex; gap:20px; flex-wrap:wrap;">
             <div style="flex:3; min-width:280px;">
-                <div style="font-size:14px; color:#94a3b8; margin-bottom:10px; font-weight:600;">
+                <div style="font-size:14px; color:#cbd5e1; margin-bottom:10px; font-weight:600;">
                     📊 ROI SIMULAZIONE
                 </div>
                 {market_rows}
@@ -119,17 +121,17 @@ def render_roi_dashboard(data):
                     <span style="font-weight:700; color:{total_color};">
                         💰 Totale: {total_profit:+.1f} unità
                     </span>
-                    <span style="color:#94a3b8;">
+                    <span style="color:#cbd5e1;">
                         🎯 Media/bet: <span style="color:#cbd5e1; font-weight:600;">{avg_profit:+.1f}u</span>
                     </span>
-                    <span style="color:#94a3b8;">
+                    <span style="color:#cbd5e1;">
                         📉 Max loss: <span style="color:#ef4444; font-weight:600;">{worst_profit:+.1f}u</span>
                     </span>
                 </div>
             </div>
             <div style="flex:1; min-width:200px; background:#111827; padding:12px; border-radius:8px;
                         border:1px solid #1f2937;">
-                <div style="font-size:12px; color:#94a3b8; font-weight:700;">🔥 TOP ROI</div>
+                <div style="font-size:12px; color:#cbd5e1; font-weight:700;">🔥 TOP ROI</div>
                 {top_rows}
                 {suggestion}
             </div>

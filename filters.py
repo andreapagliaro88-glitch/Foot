@@ -513,7 +513,7 @@ def _flat_sidebar_css(t: dict) -> str:
     [data-testid="stSidebar"] .sidebar-brand-title {{
         color: {al}; text-shadow: 0 0 10px {g45};
     }}
-    [data-testid="stSidebar"] .sidebar-brand-subtitle {{ color: #64748b; }}
+    [data-testid="stSidebar"] .sidebar-brand-subtitle {{ color: #94a3b8; }}
     [data-testid="stSidebar"] .sidebar-brand-icon {{
         background: #0f172a; border: 1px solid #1e293b; box-shadow: 0 0 10px {g35};
     }}
@@ -560,10 +560,10 @@ def _flat_sidebar_css(t: dict) -> str:
         fill: {a} !important; color: {a} !important;
     }}
     [data-testid="stSidebar"] .stWidgetLabel p,
-    [data-testid="stSidebar"] label {{ color: #94a3b8 !important; }}
-    [data-testid="stSidebar"] .stCheckbox label {{ color: #cbd5e1 !important; }}
+    [data-testid="stSidebar"] label {{ color: #cbd5e1 !important; }}
+    [data-testid="stSidebar"] .stCheckbox label {{ color: #e2e8f0 !important; }}
     [data-testid="stSidebar"] .quota-col-label,
-    [data-testid="stSidebar"] .pct-grid-label {{ color: #64748b !important; }}
+    [data-testid="stSidebar"] .pct-grid-label {{ color: #94a3b8 !important; }}
     [data-testid="stSidebar"] .sidebar-accent-text {{ color: {al}; }}
     [data-testid="stSidebar"] .pm-widget-gap {{ margin-bottom: 12px; }}
     </style>
@@ -988,13 +988,13 @@ def _inject_filter_css():
 
     /* ── Sub-labels ──────────────────────────────────────────── */
     .quota-col-label {
-        color: #64748b;
+        color: #94a3b8;
         font-size: 0.68rem;
         text-align: center;
         margin-bottom: 2px;
     }
     .pct-grid-label {
-        color: #64748b;
+        color: #94a3b8;
         font-size: 0.7rem;
         font-weight: 500;
     }
@@ -1453,7 +1453,7 @@ def _inject_league_picker_css():
     [data-testid="stSidebar"] .league-pick-label {
         font-size: 0.72rem;
         font-weight: 700;
-        color: #64748b;
+        color: #94a3b8;
         letter-spacing: 0.06em;
         text-transform: uppercase;
         margin: 8px 0 4px;
@@ -1518,6 +1518,15 @@ def render_league_picker(
     if not all_leagues:
         st.sidebar.warning("Nessun campionato nel database.")
         return default if include_all else ""
+
+    st.sidebar.caption(
+        f"📚 {len(all_leagues)} campionati · {_get_match_count():,} partite".replace(",", ".")
+    )
+    if _get_match_count() < 100_000:
+        st.sidebar.warning(
+            "Database non completo. Ferma Streamlit (Ctrl+C) e riavvia: "
+            "`streamlit run app.py`"
+        )
 
     use_all_key = f"{key}_use_all"
     if use_all_key not in st.session_state:
@@ -1683,7 +1692,7 @@ def _render_odds_1x2_inputs(widget_keys: tuple[str, str, str, str, str, str]) ->
         oh_min = st.number_input("oh_min", 1.0, 99.0,
                                  step=0.1, format="%.2f", key=oh_min_k,
                                  label_visibility="collapsed")
-        st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
+        st.markdown('<p style="text-align:center;color:#94a3b8;font-size:0.7rem;margin:0">—</p>',
                     unsafe_allow_html=True)
         oh_max = st.number_input("oh_max", 1.0, 99.0,
                                  step=0.1, format="%.2f", key=oh_max_k,
@@ -1693,7 +1702,7 @@ def _render_odds_1x2_inputs(widget_keys: tuple[str, str, str, str, str, str]) ->
         od_min = st.number_input("od_min", 1.0, 99.0,
                                  step=0.1, format="%.2f", key=od_min_k,
                                  label_visibility="collapsed")
-        st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
+        st.markdown('<p style="text-align:center;color:#94a3b8;font-size:0.7rem;margin:0">—</p>',
                     unsafe_allow_html=True)
         od_max = st.number_input("od_max", 1.0, 99.0,
                                  step=0.1, format="%.2f", key=od_max_k,
@@ -1703,7 +1712,7 @@ def _render_odds_1x2_inputs(widget_keys: tuple[str, str, str, str, str, str]) ->
         oa_min = st.number_input("oa_min", 1.0, 99.0,
                                  step=0.1, format="%.2f", key=oa_min_k,
                                  label_visibility="collapsed")
-        st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
+        st.markdown('<p style="text-align:center;color:#94a3b8;font-size:0.7rem;margin:0">—</p>',
                     unsafe_allow_html=True)
         oa_max = st.number_input("oa_max", 1.0, 99.0,
                                  step=0.1, format="%.2f", key=oa_max_k,
@@ -1792,7 +1801,7 @@ def _render_prematch_filters(screen: str, sv: dict) -> dict:
                                        float(sv.get(f"odds_{key}_min", 1.0)),
                                        step=0.1, format="%.2f",
                                        key=f"{screen}_{key}_min", label_visibility="collapsed")
-                st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
+                st.markdown('<p style="text-align:center;color:#94a3b8;font-size:0.7rem;margin:0">—</p>',
                             unsafe_allow_html=True)
                 vmax = st.number_input(f"{key}_max_lbl", 1.0, 99.0,
                                        float(sv.get(f"odds_{key}_max", 99.0)),
@@ -1810,7 +1819,7 @@ def _render_prematch_filters(screen: str, sv: dict) -> dict:
                                      float(sv.get("odds_btts_yes_min", 1.0)),
                                      step=0.1, format="%.2f",
                                      key=f"{screen}_btts_yes_min", label_visibility="collapsed")
-            st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
+            st.markdown('<p style="text-align:center;color:#94a3b8;font-size:0.7rem;margin:0">—</p>',
                         unsafe_allow_html=True)
             by_max = st.number_input("by_max_lbl", 1.0, 99.0,
                                      float(sv.get("odds_btts_yes_max", 99.0)),
@@ -1822,7 +1831,7 @@ def _render_prematch_filters(screen: str, sv: dict) -> dict:
                                      float(sv.get("odds_btts_no_min", 1.0)),
                                      step=0.1, format="%.2f",
                                      key=f"{screen}_btts_no_min", label_visibility="collapsed")
-            st.markdown('<p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0">—</p>',
+            st.markdown('<p style="text-align:center;color:#94a3b8;font-size:0.7rem;margin:0">—</p>',
                         unsafe_allow_html=True)
             bn_max = st.number_input("bn_max_lbl", 1.0, 99.0,
                                      float(sv.get("odds_btts_no_max", 99.0)),
@@ -2159,7 +2168,7 @@ def _render_live_filters(sv: dict) -> dict:
         match_min = int(cur_min)
         match_sec = 0
 
-    status_col = "#22c55e" if running else "#64748b"
+    status_col = "#22c55e" if running else "#94a3b8"
     status_txt = "▶ PLAY" if running else "⏸ PAUSA"
     st.sidebar.markdown(
         f'<div class="live-clock-display">{match_min}:{match_sec:02d}</div>'
@@ -2514,6 +2523,14 @@ def _get_leagues() -> list:
         return get_leagues()
     except Exception:
         return []
+
+
+def _get_match_count() -> int:
+    try:
+        from database import get_match_count
+        return int(get_match_count() or 0)
+    except Exception:
+        return 0
 
 
 def _get_seasons() -> list:

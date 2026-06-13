@@ -7,8 +7,8 @@ from utils import parse_goal_minute_value
 
 C_BLUE2 = "#3b82f6"
 C_RED = "#ef4444"
-C_MUTED = "#94a3b8"
-C_MUTED2 = "#64748b"
+C_MUTED = "#cbd5e1"
+C_MUTED2 = "#94a3b8"
 PLOT_BG = "rgba(0,0,0,0)"
 
 

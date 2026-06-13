@@ -72,3 +72,40 @@ def test_build_future_intervals_and_best():
     cum = prob_goal_within_minutes(df, 55, 10)
     assert cum["with_goal"] == 2
     assert cum["total"] == 3
+
+
+def test_stoppage_goals_in_45_90_plus_buckets():
+    df = pd.DataFrame([
+        _row("10,45'2,70", ""),
+        _row("20", "90'3"),
+        _row("30", ""),
+    ])
+    t5 = build_future_intervals(df, 27, 5)
+    t10 = build_future_intervals(df, 27, 10)
+    t15 = build_future_intervals(df, 27, 15)
+
+    assert t5["45+"]["goals"] == 1
+    assert t5["90+"]["goals"] == 1
+    assert t10["45+"]["goals"] == 1
+    assert t10["90+"]["goals"] == 1
+    assert t15["45+"]["goals"] == 1
+    assert t15["90+"]["goals"] == 1
+
+    # 45'2 (47') non deve finire in fascia regolare 45-50
+    assert t5.get("45-50", {}).get("goals", 0) == 0
+
+
+def test_post_goal_uses_goal_minute_not_live_minute():
+    from calculations import calc_post_goal_future_analysis
+
+    df = pd.DataFrame([
+        {**_row("27,70", ""), "match_id": 1},
+        {**_row("28,80", ""), "match_id": 2},
+        {**_row("10,50", ""), "match_id": 3},
+    ])
+    analysis = calc_post_goal_future_analysis(df, reference_minute=27, input_minute=67)
+    assert analysis["reference_minute"] == 27
+    assert analysis["tables"]["total"]["count"] == 2
+    table = analysis["tables"]["total"]["table"]
+    assert "16-30" in table
+    assert "61-75" in table
